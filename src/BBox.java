@@ -1,12 +1,12 @@
 /**
  * Class for a bounding box just holds 4 ints
- * 
+ *
  * @x1: the xth pixel of the frame for the first corner
  * @y1: the yth pixel of the frame for the first corner
  * @x2: the xth pixel of the frame for the second corner
  * @y2: the yth pixel of the frame for the second corner
  *
- * @author DRock
+ * @author Derek Opdycke
  *
  */
 public class BBox {
@@ -46,6 +46,20 @@ public class BBox {
 
     public void sety2(int y) {
         this.y2 = y;
+    }
+
+    /*
+     * Constructors
+     */
+    public BBox() {
+
+    }
+
+    public BBox(int x1, int y1, int x2, int y2) {
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
     }
 
 }

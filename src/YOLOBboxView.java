@@ -17,35 +17,59 @@ public interface YOLOBboxView extends ActionListener {
     void registerObserver(YOLOBboxController controller);
 
     /**
-     * Updates input display based on String provided as argument.
+     * Updates video location display based on String provided as argument.
      *
-     * @param input
-     *            new value of input display
+     * @param s
+     *            new value of video location display
      */
-    void updateVideoLocationTextDisplay(String input);
+    void updateVideoLocationTextDisplay(String s);
 
     /**
-     * Updates output display based on String provided as argument.
+     * Updates export location display based on String provided as argument.
      *
-     * @param output
-     *            new value of output display
+     * @param s
+     *            new value of export location display
      */
-    void updateExportLocationTextDisplay(String output);
+    void updateExportLocationTextDisplay(String s);
 
     /**
-     * Updates input display based on String provided as argument.
+     * Updates item index display based on integer provided as argument.
      *
-     * @param input
+     * @param i
      *            new value of input display
      */
     void updateItemIndexTextDisplay(int i);
 
     /**
-     * Updates output display based on String provided as argument.
+     * Updates number of frames display based on integer provided as argument.
      *
-     * @param output
+     * @param i
      *            new value of output display
      */
-    void updateNumberOfFramesTextDisplay(int i);
+    void updateTotalFramesTextDisplay(int i);
+
+    /**
+     * Updates current frame display based on integer provided as argument.
+     *
+     * @param i
+     *            new value of output display
+     */
+    void updateCurrentFrameTextDisplay(int i);
+
+    /**
+     * Updates frame rate display based on integer provided as argument.
+     *
+     * @param i
+     *            new value of output display
+     */
+    void updateFrameRateTextDisplay(int i);
+
+    /**
+     * Updates frame jump display based on integer provided as argument.
+     *
+     * @param i
+     *            new value of output display
+     */
+    void updateFrameJumpTextDisplay(int i);
 
 }

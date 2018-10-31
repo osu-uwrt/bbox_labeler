@@ -1,3 +1,5 @@
+import components.map.Map;
+
 /**
  * Model interface.
  *
@@ -28,5 +30,13 @@ public interface YOLOBboxModel {
     int frameJump();
 
     void setFrameJump(int x);
+
+    int totalFrames();
+
+    void setTotalFrames(int x);
+
+    Map<Integer, BBox> bbox();
+
+    Map<Integer, YOLO> yolo();
 
 }

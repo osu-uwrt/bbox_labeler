@@ -198,10 +198,10 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
     }
 
     /**
-     * Updates input display based on String provided as argument.
+     * Updates video location display based on String provided as argument.
      *
-     * @param input
-     *            new value of input display
+     * @param s
+     *            new value of video location display
      */
     @Override
     public void updateVideoLocationTextDisplay(String s) {
@@ -209,10 +209,10 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
     }
 
     /**
-     * Updates output display based on String provided as argument.
+     * Updates export location display based on String provided as argument.
      *
-     * @param output
-     *            new value of output display
+     * @param s
+     *            new value of export location display
      */
     @Override
     public void updateExportLocationTextDisplay(String s) {
@@ -220,10 +220,10 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
     }
 
     /**
-     * Updates output display based on String provided as argument.
+     * Updates item display based on integer provided as argument.
      *
-     * @param output
-     *            new value of output display
+     * @param i
+     *            b new value of item index display
      */
     @Override
     public void updateItemIndexTextDisplay(int i) {
@@ -231,13 +231,46 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
     }
 
     /**
-     * Updates output display based on String provided as argument.
+     * Updates total frames display based on integer provided as argument.
      *
-     * @param output
-     *            new value of output display
+     * @param i
+     *            new value of total frames display
      */
     @Override
-    public void updateNumberOfFramesTextDisplay(int i) {
+    public void updateTotalFramesTextDisplay(int i) {
+        //display does not currently show total frames
+    }
+
+    /**
+     * Updates current display based on integer provided as argument.
+     *
+     * @param i
+     *            new value of current frame display
+     */
+    @Override
+    public void updateCurrentFrameTextDisplay(int i) {
+        this.frameNumberLabel.setText(String.valueOf(i));
+    }
+
+    /**
+     * Updates frame rate display based on integer provided as argument.
+     *
+     * @param i
+     *            new value of frame rate display
+     */
+    @Override
+    public void updateFrameRateTextDisplay(int i) {
+        //display does not currently show frame rate
+    }
+
+    /**
+     * Updates frame jump display based on integer provided as argument.
+     *
+     * @param i
+     *            new value of frame jump display
+     */
+    @Override
+    public void updateFrameJumpTextDisplay(int i) {
         this.numberOfFramesText.setText(String.valueOf(i));
     }
 

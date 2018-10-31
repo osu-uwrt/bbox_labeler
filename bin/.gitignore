@@ -1,3 +1,5 @@
+/YOLO.class
+/BBox.class
 /YOLOBboxController.class
 /YOLOBboxController1.class
 /YOLOBboxGUI.class
@@ -5,4 +7,3 @@
 /YOLOBboxModel1.class
 /YOLOBboxView.class
 /YOLOBboxView1.class
-/BBox.class

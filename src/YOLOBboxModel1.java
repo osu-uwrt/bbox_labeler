@@ -12,8 +12,9 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
      * Model variables.
      */
     private String videoLocation, exportLocation;
-    private int itemIndex, currentFrame, frameRate, frameJump;
+    private int itemIndex, currentFrame, frameRate, frameJump, totalFrames;
     private Map<Integer, BBox> bbox;
+    private Map<Integer, YOLO> yolo;
 
     /**
      * Default constructor.
@@ -29,6 +30,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.frameRate = 0;
         this.frameJump = 0;
         this.bbox = new Map1L<Integer, BBox>();
+        this.totalFrames = 0;
+        this.yolo = new Map1L<Integer, YOLO>();
 
     }
 
@@ -90,6 +93,27 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public int frameJump() {
         return this.frameJump;
+    }
+
+    @Override
+    public void setTotalFrames(int x) {
+        this.totalFrames = x;
+
+    }
+
+    @Override
+    public int totalFrames() {
+        return this.totalFrames;
+    }
+
+    @Override
+    public Map<Integer, BBox> bbox() {
+        return this.bbox;
+    }
+
+    @Override
+    public Map<Integer, YOLO> yolo() {
+        return this.yolo;
     }
 
 }

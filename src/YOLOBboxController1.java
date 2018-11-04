@@ -52,6 +52,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
         view.updateTotalFramesTextDisplay(totalFrames);
+        //this is a test
 
     }
 

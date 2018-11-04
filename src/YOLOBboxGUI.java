@@ -15,6 +15,7 @@ public class YOLOBboxGUI {
     	YOLOBboxModel model = new YOLOBboxModel1();
     	YOLOBboxView view = new YOLOBboxView1();
     	YOLOBboxController controller = new YOLOBboxController1(model, view);
+    	//this is a test
 
         view.registerObserver(controller);
     }

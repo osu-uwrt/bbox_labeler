@@ -1,8 +1,10 @@
 import java.awt.Cursor;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
@@ -272,6 +274,12 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
     @Override
     public void updateFrameJumpTextDisplay(int i) {
         this.numberOfFramesText.setText(String.valueOf(i));
+    }
+
+    @Override
+    public void loadFrame(BufferedImage img) {
+        ImageIcon icon = new ImageIcon(img);
+        this.imageLabel.setIcon(icon);
     }
 
     @Override

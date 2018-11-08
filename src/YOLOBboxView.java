@@ -1,4 +1,5 @@
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 
 /**
  * View interface.
@@ -71,5 +72,13 @@ public interface YOLOBboxView extends ActionListener {
      *            new value of output display
      */
     void updateFrameJumpTextDisplay(int i);
+
+    /**
+     * Updates the frame shown with the image given
+     *
+     * @param img
+     *            The image that should be loaded
+     */
+    public void loadFrame(BufferedImage img);
 
 }

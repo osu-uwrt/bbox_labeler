@@ -1,3 +1,7 @@
+import java.io.File;
+
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+
 import components.map.Map;
 import components.map.Map1L;
 
@@ -15,6 +19,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private int itemIndex, currentFrame, frameRate, frameJump, totalFrames;
     private Map<Integer, BBox> bbox;
     private Map<Integer, YOLO> yolo;
+    private File file;
+    private FFmpegFrameGrabber frameGrabber;
 
     /**
      * Default constructor.
@@ -32,7 +38,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.bbox = new Map1L<Integer, BBox>();
         this.totalFrames = 0;
         this.yolo = new Map1L<Integer, YOLO>();
-
+        this.file = new File("");
+        this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
     }
 
     @Override
@@ -114,6 +121,26 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public Map<Integer, YOLO> yolo() {
         return this.yolo;
+    }
+
+    @Override
+    public File file() {
+        return this.file;
+    }
+
+    @Override
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    @Override
+    public FFmpegFrameGrabber frameGrabber() {
+        return this.frameGrabber;
+    }
+
+    @Override
+    public void setFrameGrabber(FFmpegFrameGrabber frameGrabber) {
+        this.frameGrabber = frameGrabber;
     }
 
 }

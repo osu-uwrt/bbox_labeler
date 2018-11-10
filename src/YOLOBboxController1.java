@@ -228,20 +228,22 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //equal to the given number of frames
 
         FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+        int currentFrame = this.model.currentFrame();
         int i = 0;
         int distToEnd = this.model.totalFrames() - this.model.currentFrame();
         Frame f = new Frame();
         try {
             frameGrabber.start();
+            int jump = this.model.frameJump();
             //load the the frameJump-th next frame
-            while (i < distToEnd && i < this.model.frameJump()) {
+            while (i < distToEnd && i < currentFrame + jump) {
                 f = frameGrabber.grab();
                 i++;
             }
             Java2DFrameConverter j = new Java2DFrameConverter();
             BufferedImage bi = j.convert(f);
             this.view.loadFrame(bi);
-            this.model.setCurrentFrame(this.model.currentFrame() + i);
+            this.model.setCurrentFrame(currentFrame+i);
             frameGrabber.stop();
         } catch (Exception e) {
             System.out.println("Could not load next frame");

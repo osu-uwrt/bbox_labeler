@@ -1,6 +1,16 @@
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.File;
+import java.io.IOException;
 
 import javax.swing.JFileChooser;
+
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber.Exception;
+import org.bytedeco.javacv.Java2DFrameConverter;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
 
 import components.map.Map;
 import components.map.Map1L;
@@ -52,7 +62,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
         view.updateTotalFramesTextDisplay(totalFrames);
-        //this is a test
 
     }
 
@@ -97,20 +106,42 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      */
     @Override
     public void processBrowseVideoLocationEvent() {
-        /*
-         * Update model in response to this event
-         */
         //Create a file chooser
         final JFileChooser fc = new JFileChooser();
         int returnVal = fc.showOpenDialog(fc);
 
+        //if they chose a file
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             File file = fc.getSelectedFile();
 
+            //try to load the file and load the first frame
+            try {
+                FFmpegFrameGrabber frameGrabber = new FFmpegFrameGrabber(
+                        String.valueOf(file));
+                this.model.setFrameGrabber(frameGrabber);
+                frameGrabber.start();
+                //make sure the file is a video file and has frames
+                if (frameGrabber.hasVideo()
+                        && frameGrabber.getLengthInFrames() > 0) {
+                    Java2DFrameConverter j = new Java2DFrameConverter();
+                    BufferedImage bi = j.convert(frameGrabber.grab());
+                    this.view.loadFrame(bi);
+                    this.model.setFrameRate((int) frameGrabber.getFrameRate());
+                    this.model.setTotalFrames(
+                            frameGrabber.getLengthInVideoFrames());
+
+                }
+                frameGrabber.stop();
+            } catch (IOException e) {
+                System.out.println("Trouble Loading File");
+            }
+
+            /*
+             * Update model in response to this event
+             */
             this.model.setVideoLocation(String.valueOf(file));
-
-            //open the file and show the first frame if the file is the right type
-
+            this.model.setFile(file);
+            this.model.setCurrentFrame(0);
         }
         /*
          * Update view to reflect changes in model
@@ -150,7 +181,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
 
-        //process the video and create a picture file and text
+        //TODO process the video and create a picture file and text
         //file for every frame of the video and send it to the
         //location and then compress it into a .zip file
         this.processCV();
@@ -175,7 +206,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
 
-        //go back in the video a number of frames
+        //TODO go back in the video a number of frames
         //equal to the given number of frames
 
         /*
@@ -193,9 +224,28 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
 
-        //go forward in the video a number of frames
+        //TODO go forward in the video a number of frames
         //equal to the given number of frames
 
+        FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+        int i = 0;
+        int distToEnd = this.model.totalFrames() - this.model.currentFrame();
+        Frame f = new Frame();
+        try {
+            frameGrabber.start();
+            //load the the frameJump-th next frame
+            while (i < distToEnd && i < this.model.frameJump()) {
+                f = frameGrabber.grab();
+                i++;
+            }
+            Java2DFrameConverter j = new Java2DFrameConverter();
+            BufferedImage bi = j.convert(f);
+            this.view.loadFrame(bi);
+            this.model.setCurrentFrame(this.model.currentFrame() + i);
+            frameGrabber.stop();
+        } catch (Exception e) {
+            System.out.println("Could not load next frame");
+        }
         /*
          * Update view to reflect changes in model
          */
@@ -246,6 +296,62 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         }
         m = tempMap;
         return largestKey;
+    }
+
+    /*
+     * Converts a buffered image to a Mat needed for opencv
+     */
+    private static Mat img3Mat(BufferedImage bi) {
+        Mat mat = new Mat(bi.getHeight(), bi.getWidth(), CvType.CV_8UC3);
+        byte[] data = ((DataBufferByte) bi.getRaster().getDataBuffer())
+                .getData();
+        mat.put(0, 0, data);
+        return mat;
+    }
+
+    public static Mat img2Mat(BufferedImage in) {
+        Mat out;
+        byte[] data;
+        int r, g, b;
+
+        if (in.getType() == BufferedImage.TYPE_INT_RGB) {
+            out = new Mat(240, 320, CvType.CV_8UC3);
+            data = new byte[320 * 240 * (int) out.elemSize()];
+            int[] dataBuff = in.getRGB(0, 0, 320, 240, null, 0, 320);
+            for (int i = 0; i < dataBuff.length; i++) {
+                data[i * 3] = (byte) ((dataBuff[i] >> 16) & 0xFF);
+                data[i * 3 + 1] = (byte) ((dataBuff[i] >> 8) & 0xFF);
+                data[i * 3 + 2] = (byte) ((dataBuff[i] >> 0) & 0xFF);
+            }
+        } else {
+            out = new Mat(240, 320, CvType.CV_8UC1);
+            data = new byte[320 * 240 * (int) out.elemSize()];
+            int[] dataBuff = in.getRGB(0, 0, 320, 240, null, 0, 320);
+            for (int i = 0; i < dataBuff.length; i++) {
+                r = (byte) ((dataBuff[i] >> 16) & 0xFF);
+                g = (byte) ((dataBuff[i] >> 8) & 0xFF);
+                b = (byte) ((dataBuff[i] >> 0) & 0xFF);
+                data[i] = (byte) ((0.21 * r) + (0.71 * g) + (0.07 * b)); //luminosity
+            }
+        }
+        out.put(0, 0, data);
+        return out;
+    }
+
+    /*
+     * Converts a Mat to a buffered image
+     */
+    private static BufferedImage mat2Img(Mat in) {
+        BufferedImage out;
+        byte[] data = new byte[320 * 240 * (int) in.elemSize()];
+        int type = BufferedImage.TYPE_3BYTE_BGR;
+        ;
+        in.get(0, 0, data);
+
+        out = new BufferedImage(320, 240, type);
+
+        out.getRaster().setDataElements(0, 0, 320, 240, data);
+        return out;
     }
 
 }

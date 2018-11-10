@@ -1,3 +1,7 @@
+import java.io.File;
+
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+
 import components.map.Map;
 
 /**
@@ -38,5 +42,13 @@ public interface YOLOBboxModel {
     Map<Integer, BBox> bbox();
 
     Map<Integer, YOLO> yolo();
+
+    File file();
+
+    void setFile(File file);
+
+    FFmpegFrameGrabber frameGrabber();
+
+    void setFrameGrabber(FFmpegFrameGrabber frameGrabber);
 
 }

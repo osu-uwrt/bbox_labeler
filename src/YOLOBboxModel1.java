@@ -34,7 +34,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.itemIndex = 0;
         this.currentFrame = 0;
         this.frameRate = 0;
-        this.frameJump = 0;
+        this.frameJump = 5;
         this.bbox = new Map1L<Integer, BBox>();
         this.totalFrames = 0;
         this.yolo = new Map1L<Integer, YOLO>();

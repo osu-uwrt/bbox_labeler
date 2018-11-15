@@ -282,6 +282,18 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         this.imageLabel.setIcon(icon);
     }
 
+    private void toggleButtons() {
+        this.resetButton.setEnabled(!this.resetButton.isEnabled());
+        this.browseVideoLocationButton
+                .setEnabled(!this.browseVideoLocationButton.isEnabled());
+        this.browseExportLocationButton
+                .setEnabled(!this.browseExportLocationButton.isEnabled());
+        this.exportButton.setEnabled(!this.exportButton.isEnabled());
+        this.framesBackButton.setEnabled(!this.framesBackButton.isEnabled());
+        this.framesForwardButton
+                .setEnabled(!this.framesForwardButton.isEnabled());
+    }
+
     @Override
     public void actionPerformed(ActionEvent event) {
         /*
@@ -302,17 +314,29 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         Object source = event.getSource();
 
         if (source == this.resetButton) {
+            this.toggleButtons();
             this.controller.processResetEvent();
+            this.toggleButtons();
         } else if (source == this.browseVideoLocationButton) {
+            this.toggleButtons();
             this.controller.processBrowseVideoLocationEvent();
+            this.toggleButtons();
         } else if (source == this.browseExportLocationButton) {
+            this.toggleButtons();
             this.controller.processBrowseExportLocationEvent();
+            this.toggleButtons();
         } else if (source == this.exportButton) {
+            this.toggleButtons();
             this.controller.processExportEvent();
+            this.toggleButtons();
         } else if (source == this.framesBackButton) {
+            this.toggleButtons();
             this.controller.processFramesBackEvent();
+            this.toggleButtons();
         } else if (source == this.framesForwardButton) {
+            this.toggleButtons();
             this.controller.processFramesForwardEvent();
+            this.toggleButtons();
         }
         /*
          * Set the cursor back to normal (because we changed it at the beginning

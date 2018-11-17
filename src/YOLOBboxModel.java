@@ -1,3 +1,4 @@
+import java.awt.Image;
 import java.io.File;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -50,5 +51,11 @@ public interface YOLOBboxModel {
     FFmpegFrameGrabber frameGrabber();
 
     void setFrameGrabber(FFmpegFrameGrabber frameGrabber);
+
+    Image image();
+
+    void setImage(Image image);
+
+    void scaleFrame(int height, int width);
 
 }

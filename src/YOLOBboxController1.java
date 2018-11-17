@@ -1,3 +1,4 @@
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
@@ -52,6 +53,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         int frameRate = model.frameRate();
         int frameJump = model.frameJump();
         int totalFrames = model.totalFrames();
+        Image image = model.image();
         /*
          * Update view to reflect changes in model
          */
@@ -62,6 +64,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
         view.updateTotalFramesTextDisplay(totalFrames);
+        view.loadFrame((BufferedImage) image);
 
     }
 
@@ -126,8 +129,10 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                     frameGrabber.setAudioChannels(0);
                     Java2DFrameConverter j = new Java2DFrameConverter();
                     frameGrabber.setFrameNumber(0);
-                    BufferedImage bi = j.convert(frameGrabber.grabImage());
-                    this.view.loadFrame(bi);
+                    Image bi = j.convert(frameGrabber.grabImage());
+                    this.model.setImage(bi);
+                    this.model.scaleFrame(this.view.getFrameAreaHeight(),
+                            this.view.getFrameAreaWidth());
                     this.model.setFrameRate((int) frameGrabber.getFrameRate());
                     this.model.setTotalFrames(
                             frameGrabber.getLengthInVideoFrames());
@@ -249,7 +254,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             System.out.println(f);
             BufferedImage bi = j.convert(f);
             System.out.println(bi);
-            this.view.loadFrame(bi);
+            this.model.setImage(bi);
+            this.model.scaleFrame(this.view.getFrameAreaHeight(),
+                    this.view.getFrameAreaWidth());
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
             frameGrabber.stop();
         } catch (Exception e) {

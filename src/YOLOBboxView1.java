@@ -282,6 +282,9 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         this.imageLabel.setIcon(icon);
     }
 
+    /*
+     * Toggles the buttons to enable/disable them
+     */
     private void toggleButtons() {
         this.resetButton.setEnabled(!this.resetButton.isEnabled());
         this.browseVideoLocationButton
@@ -343,6 +346,16 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
          * of the method body)
          */
         this.setCursor(Cursor.getDefaultCursor());
+    }
+
+    @Override
+    public int getFrameAreaHeight() {
+        return this.imageLabel.getHeight();
+    }
+
+    @Override
+    public int getFrameAreaWidth() {
+        return this.imageLabel.getWidth();
     }
 
 }

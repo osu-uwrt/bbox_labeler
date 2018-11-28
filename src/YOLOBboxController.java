@@ -107,4 +107,19 @@ public interface YOLOBboxController {
      */
     void processFramesForwardEvent();
 
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processResizeEvent();
+
 }

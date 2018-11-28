@@ -1,11 +1,6 @@
-import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 
@@ -28,7 +23,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private Map<Integer, YOLO> yolo;
     private File file;
     private FFmpegFrameGrabber frameGrabber;
-    private Image image;
+    private Image master;
+    private BufferedImage scaled;
 
     /**
      * Default constructor.
@@ -48,11 +44,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.yolo = new Map1L<Integer, YOLO>();
         this.file = new File("");
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
-        try {
-            this.image = ImageIO.read(new File("data/Default.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.master = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
+        this.scaled = (BufferedImage) this.master;
     }
 
     @Override
@@ -158,37 +151,23 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     }
 
     @Override
-    public Image image() {
-        return this.image;
+    public Image master() {
+        return this.master;
     }
 
     @Override
-    public void setImage(Image image) {
-        this.image = image;
+    public void setMaster(Image image) {
+        this.master = image;
     }
 
-    /*
-     * Scales the image to the given height and width.
-     */
     @Override
-    public void scaleFrame(int height, int width) {
-        this.image = this.getScaledImage(this.image, width, height);
+    public BufferedImage scaled() {
+        return this.scaled;
     }
 
-    /*
-     * Returns an image of the given height and width using the given image.
-     */
-    private Image getScaledImage(Image srcImg, int w, int h) {
-        BufferedImage resizedImg = new BufferedImage(w, h,
-                BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = resizedImg.createGraphics();
-
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(srcImg, 0, 0, w, h, null);
-        g2.dispose();
-
-        return resizedImg;
+    @Override
+    public void setScaled(BufferedImage image) {
+        this.scaled = image;
     }
 
 }

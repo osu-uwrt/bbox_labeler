@@ -1,6 +1,8 @@
 import java.awt.Cursor;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
 
@@ -41,7 +43,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
      * Text areas.
      */
     private final JTextArea videoLocationText, exportLocationText;
-    private final JFormattedTextField itemIndexText, numberOfFramesText;
+    private final JFormattedTextField itemIndexText, frameJumpText;
 
     /**
      * Buttons.
@@ -80,8 +82,8 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         formatter.setMaximum(Integer.MAX_VALUE);
         formatter.setAllowsInvalid(false);
         this.itemIndexText = new JFormattedTextField(formatter);
-        this.numberOfFramesText = new JFormattedTextField(formatter);
-        this.numberOfFramesText.setText("1");
+        this.frameJumpText = new JFormattedTextField(formatter);
+        this.frameJumpText.setText("1");
         this.browseVideoLocationButton = new JButton("Browse for video");
         this.browseExportLocationButton = new JButton(
                 "Browse for export folder");
@@ -103,7 +105,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         this.exportLocationText.setLineWrap(true);
         this.exportLocationText.setAutoscrolls(true);
         this.itemIndexText.setEditable(true);
-        this.numberOfFramesText.setEditable(false);
+        this.frameJumpText.setEditable(true);
 
         /*
          * Create a button panel organized using grid layout
@@ -142,7 +144,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         frameControlPanel.add(this.framesLabel);
         frameControlPanel.add(new JLabel());
         frameControlPanel.add(this.framesBackButton);
-        frameControlPanel.add(this.numberOfFramesText);
+        frameControlPanel.add(this.frameJumpText);
         frameControlPanel.add(this.framesForwardButton);
 
         /*
@@ -172,6 +174,14 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         this.exportButton.addActionListener(this);
         this.framesBackButton.addActionListener(this);
         this.framesForwardButton.addActionListener(this);
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent componentEvent) {
+                if (YOLOBboxView1.this.controller != null) {
+                    YOLOBboxView1.this.controller.processResizeEvent();
+                }
+            }
+        });
 
         // Start the main application window --------------------------------
 
@@ -273,13 +283,32 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
      */
     @Override
     public void updateFrameJumpTextDisplay(int i) {
-        this.numberOfFramesText.setText(String.valueOf(i));
+        this.frameJumpText.setText(String.valueOf(i));
     }
 
     @Override
     public void loadFrame(BufferedImage img) {
         ImageIcon icon = new ImageIcon(img);
         this.imageLabel.setIcon(icon);
+        int heightOffset = (this.imageLabel.getHeight() - img.getHeight()) / 2;
+        int widthOffset = (this.imageLabel.getWidth() - img.getWidth()) / 2;
+        this.imageLabel.setBounds(widthOffset, heightOffset, img.getWidth(),
+                img.getHeight());
+    }
+
+    /*
+     * Toggles the buttons to enable/disable them
+     */
+    private void toggleButtons() {
+        this.resetButton.setEnabled(!this.resetButton.isEnabled());
+        this.browseVideoLocationButton
+                .setEnabled(!this.browseVideoLocationButton.isEnabled());
+        this.browseExportLocationButton
+                .setEnabled(!this.browseExportLocationButton.isEnabled());
+        this.exportButton.setEnabled(!this.exportButton.isEnabled());
+        this.framesBackButton.setEnabled(!this.framesBackButton.isEnabled());
+        this.framesForwardButton
+                .setEnabled(!this.framesForwardButton.isEnabled());
     }
 
     @Override
@@ -302,23 +331,59 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         Object source = event.getSource();
 
         if (source == this.resetButton) {
+            this.toggleButtons();
             this.controller.processResetEvent();
+            this.toggleButtons();
         } else if (source == this.browseVideoLocationButton) {
+            this.toggleButtons();
             this.controller.processBrowseVideoLocationEvent();
+            this.toggleButtons();
         } else if (source == this.browseExportLocationButton) {
+            this.toggleButtons();
             this.controller.processBrowseExportLocationEvent();
+            this.toggleButtons();
         } else if (source == this.exportButton) {
+            this.toggleButtons();
             this.controller.processExportEvent();
+            this.toggleButtons();
         } else if (source == this.framesBackButton) {
+            this.toggleButtons();
             this.controller.processFramesBackEvent();
+            this.toggleButtons();
         } else if (source == this.framesForwardButton) {
+            this.toggleButtons();
             this.controller.processFramesForwardEvent();
+            this.toggleButtons();
         }
         /*
          * Set the cursor back to normal (because we changed it at the beginning
          * of the method body)
          */
         this.setCursor(Cursor.getDefaultCursor());
+    }
+
+    @Override
+    public int getFrameAreaHeight() {
+        return this.imageLabel.getHeight();
+    }
+
+    @Override
+    public int getFrameAreaWidth() {
+        return this.imageLabel.getWidth();
+    }
+
+    @Override
+    public int getFrameJump() {
+        String text = this.frameJumpText.getText();
+        int i = 0;
+        StringBuilder sb = new StringBuilder();
+        while (i < text.length()) {
+            if (text.charAt(i) != ',') {
+                sb.append(text.charAt(i));
+            }
+            i++;
+        }
+        return Integer.parseInt(sb.toString());
     }
 
 }

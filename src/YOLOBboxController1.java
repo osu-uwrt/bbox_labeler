@@ -1,3 +1,6 @@
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
@@ -52,6 +55,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         int frameRate = model.frameRate();
         int frameJump = model.frameJump();
         int totalFrames = model.totalFrames();
+        Image image = model.scaled();
         /*
          * Update view to reflect changes in model
          */
@@ -62,6 +66,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
         view.updateTotalFramesTextDisplay(totalFrames);
+        view.loadFrame((BufferedImage) image);
 
     }
 
@@ -108,6 +113,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     public void processBrowseVideoLocationEvent() {
         //Create a file chooser
         final JFileChooser fc = new JFileChooser();
+        //TODO remove the next line. It is only there for testing.
+        fc.setCurrentDirectory(new File(
+                "C:\\Users\\Public\\Videos\\Sample Videos\\Wildlife.wmv"));
         int returnVal = fc.showOpenDialog(fc);
 
         //if they chose a file
@@ -123,25 +131,31 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                 //make sure the file is a video file and has frames
                 if (frameGrabber.hasVideo()
                         && frameGrabber.getLengthInFrames() > 0) {
+                    frameGrabber.setAudioChannels(0);
                     Java2DFrameConverter j = new Java2DFrameConverter();
-                    BufferedImage bi = j.convert(frameGrabber.grab());
-                    this.view.loadFrame(bi);
+                    frameGrabber.setFrameNumber(0);
+                    Image bi = j.convert(frameGrabber.grabImage());
+                    this.model.setMaster(bi);
+                    BufferedImage scaled = (BufferedImage) this
+                            .getScaledImage(bi);
+                    this.model.setScaled(scaled);
                     this.model.setFrameRate((int) frameGrabber.getFrameRate());
                     this.model.setTotalFrames(
                             frameGrabber.getLengthInVideoFrames());
 
                 }
                 frameGrabber.stop();
+
+                /*
+                 * Update model in response to this event
+                 */
+                this.model.setVideoLocation(String.valueOf(file));
+                this.model.setFile(file);
+                this.model.setCurrentFrame(frameGrabber.getFrameNumber());
+
             } catch (IOException e) {
                 System.out.println("Trouble Loading File");
             }
-
-            /*
-             * Update model in response to this event
-             */
-            this.model.setVideoLocation(String.valueOf(file));
-            this.model.setFile(file);
-            this.model.setCurrentFrame(0);
         }
         /*
          * Update view to reflect changes in model
@@ -227,27 +241,45 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //TODO go forward in the video a number of frames
         //equal to the given number of frames
 
+        //update frame jump in the model
+        this.model.setFrameJump(this.view.getFrameJump());
         FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
         int currentFrame = this.model.currentFrame();
-        int i = 0;
         int distToEnd = this.model.totalFrames() - this.model.currentFrame();
         Frame f = new Frame();
         try {
             frameGrabber.start();
             int jump = this.model.frameJump();
             //load the the frameJump-th next frame
-            while (i < distToEnd && i < currentFrame + jump) {
-                f = frameGrabber.grab();
-                i++;
+            if (distToEnd > jump) {
+                frameGrabber.setFrameNumber(currentFrame + jump - 1);
+            } else {
+                frameGrabber.setFrameNumber(this.model.totalFrames() - 2);
             }
+            f = frameGrabber.grabImage();
             Java2DFrameConverter j = new Java2DFrameConverter();
+            System.out.println(f);
             BufferedImage bi = j.convert(f);
-            this.view.loadFrame(bi);
-            this.model.setCurrentFrame(currentFrame+i);
+            System.out.println(bi);
+            this.model.setMaster(bi);
+            BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
+            this.model.setScaled(scaled);
+            this.model.setCurrentFrame(frameGrabber.getFrameNumber());
             frameGrabber.stop();
         } catch (Exception e) {
             System.out.println("Could not load next frame");
         }
+        /*
+         * Update view to reflect changes in model
+         */
+        updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processResizeEvent() {
+        BufferedImage bi = (BufferedImage) this.model.master();
+        BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
+        this.model.setScaled(scaled);
         /*
          * Update view to reflect changes in model
          */
@@ -354,6 +386,35 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
         out.getRaster().setDataElements(0, 0, 320, 240, data);
         return out;
+    }
+
+    /*
+     * Returns an image of the appropriately scaled height for the window
+     */
+    private Image getScaledImage(Image srcImg) {
+        double heightRatio = (double) this.model.master().getHeight(null)
+                / (double) this.view.getFrameAreaHeight();
+        double widthRatio = (double) this.model.master().getWidth(null)
+                / (double) this.view.getFrameAreaWidth();
+        int newWidth;
+        int newHeight;
+        if (heightRatio > widthRatio) {
+            newHeight = (int) (this.model.master().getHeight(null)
+                    / heightRatio);
+            newWidth = (int) (this.model.master().getWidth(null) / heightRatio);
+        } else {
+            newHeight = (int) (this.model.master().getHeight(null)
+                    / widthRatio);
+            newWidth = (int) (this.model.master().getWidth(null) / widthRatio);
+        }
+        BufferedImage resizedImg = new BufferedImage(newWidth, newHeight,
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = resizedImg.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(srcImg, 0, 0, newWidth, newHeight, null);
+        g2.dispose();
+        return resizedImg;
     }
 
 }

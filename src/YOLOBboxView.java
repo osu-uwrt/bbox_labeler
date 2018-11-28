@@ -81,4 +81,10 @@ public interface YOLOBboxView extends ActionListener {
      */
     public void loadFrame(BufferedImage img);
 
+    public int getFrameAreaHeight();
+
+    public int getFrameAreaWidth();
+
+    public int getFrameJump();
+
 }

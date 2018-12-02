@@ -61,4 +61,8 @@ public interface YOLOBboxModel {
 
     void setScaled(BufferedImage image);
 
+    int videoHeight();
+
+    int videoWidth();
+
 }

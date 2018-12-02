@@ -18,7 +18,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
      * Model variables.
      */
     private String videoLocation, exportLocation;
-    private int itemIndex, currentFrame, frameRate, frameJump, totalFrames;
+    private int itemIndex, currentFrame, frameRate, frameJump, totalFrames,
+            videoWidth, videoHeight;
     private Map<Integer, BBox> bbox;
     private Map<Integer, YOLO> yolo;
     private File file;
@@ -46,6 +47,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
         this.master = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
         this.scaled = (BufferedImage) this.master;
+        this.videoHeight = this.frameGrabber.getImageHeight();
+        this.videoWidth = this.frameGrabber.getImageWidth();
     }
 
     @Override
@@ -148,6 +151,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setFrameGrabber(FFmpegFrameGrabber frameGrabber) {
         this.frameGrabber = frameGrabber;
+        this.videoHeight = this.frameGrabber.getImageHeight();
+        this.videoWidth = this.frameGrabber.getImageWidth();
     }
 
     @Override
@@ -168,6 +173,16 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setScaled(BufferedImage image) {
         this.scaled = image;
+    }
+
+    @Override
+    public int videoHeight() {
+        return this.videoHeight;
+    }
+
+    @Override
+    public int videoWidth() {
+        return this.videoWidth;
     }
 
 }

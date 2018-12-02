@@ -303,10 +303,14 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         Map<Integer, YOLO> yolo = this.model.yolo();
         Map.Pair<Integer, BBox> p = bbox.remove(frame);
         //calculate the values for YOLO from the bbox
-        int width = Math.abs(p.value().x1() - p.value().x2());
-        int height = Math.abs(p.value().y1() - p.value().y2());
-        int x = (p.value().x1() + p.value().x2()) / 2;
-        int y = (p.value().y1() + p.value().y2()) / 2;
+        int width = (int) ((Math.abs(p.value().x1() - p.value().x2())
+                * this.model.videoWidth()));
+        int height = (int) ((Math.abs(p.value().y1() - p.value().y2())
+                * this.model.videoHeight()));
+        int x = (int) ((p.value().x1() + p.value().x2())
+                * this.model.videoWidth()) / 2;
+        int y = (int) ((p.value().y1() + p.value().y2())
+                * this.model.videoWidth()) / 2;
         //add the values to the yolo map
         YOLO ny = new YOLO(x, y, width, height);
         yolo.add(frame, ny);

@@ -1,8 +1,11 @@
 import java.awt.Cursor;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
 
@@ -21,7 +24,8 @@ import javax.swing.text.NumberFormatter;
  * @author Derek Opdycke
  */
 @SuppressWarnings("serial")
-public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
+public final class YOLOBboxView1 extends JFrame
+        implements YOLOBboxView, MouseListener {
 
     /**
      * Controller object.
@@ -38,6 +42,12 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
             ROWS_IN_FRAME_CONTROL_PANEL_GRID = 2,
             COLUMNS_IN_VIDEO_PANEL_GRID = 1, ROWS_IN_VIDEO_PANEL_GRID = 2,
             DEFAULT_WIDTH_OF_WINDOW = 800, DEFAULT_HEIGHT_OF_WINDOW = 600;
+
+    /**
+     * JPanels
+     */
+    private final JPanel videoContainer, videoPanel, frameControlPanel,
+            buttonPanel;
 
     /**
      * Text areas.
@@ -110,48 +120,50 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         /*
          * Create a button panel organized using grid layout
          */
-        JPanel buttonPanel = new JPanel(new GridLayout(
-                ROWS_IN_BUTTON_PANEL_GRID, COLUMNS_IN_BUTTON_PANEL_GRID));
+        this.buttonPanel = new JPanel(new GridLayout(ROWS_IN_BUTTON_PANEL_GRID,
+                COLUMNS_IN_BUTTON_PANEL_GRID));
 
         /*
          * Create a button panel organized using grid layout
          */
-        JPanel frameControlPanel = new JPanel(
+        this.frameControlPanel = new JPanel(
                 new GridLayout(ROWS_IN_FRAME_CONTROL_PANEL_GRID,
                         COLUMNS_IN_FRAME_CONTROL_PANEL_GRID));
 
         /*
-         * Create a button panel organized using grid layout
+         * Create a panel organized using grid layout for the video
          */
-        JPanel videoPanel = new JPanel(new GridLayout(ROWS_IN_VIDEO_PANEL_GRID,
+        this.videoContainer = new JPanel(new FlowLayout());
+        this.videoPanel = new JPanel(new GridLayout(ROWS_IN_VIDEO_PANEL_GRID,
                 COLUMNS_IN_VIDEO_PANEL_GRID));
         /*
          * Add the buttons to the button panel, from left to right and top to
          * bottom
          */
-        buttonPanel.add(this.browseVideoLocationButton);
-        buttonPanel.add(this.videoLocationText);
-        buttonPanel.add(this.browseExportLocationButton);
-        buttonPanel.add(this.exportLocationText);
-        buttonPanel.add(this.exportButton);
-        buttonPanel.add(this.itemIndexText);
-        buttonPanel.add(this.resetButton);
+        this.buttonPanel.add(this.browseVideoLocationButton);
+        this.buttonPanel.add(this.videoLocationText);
+        this.buttonPanel.add(this.browseExportLocationButton);
+        this.buttonPanel.add(this.exportLocationText);
+        this.buttonPanel.add(this.exportButton);
+        this.buttonPanel.add(this.itemIndexText);
+        this.buttonPanel.add(this.resetButton);
         /*
          * Add the buttons to the frame control panel, from left to right and
          * top to bottom
          */
-        frameControlPanel.add(new JLabel());
-        frameControlPanel.add(this.framesLabel);
-        frameControlPanel.add(new JLabel());
-        frameControlPanel.add(this.framesBackButton);
-        frameControlPanel.add(this.frameJumpText);
-        frameControlPanel.add(this.framesForwardButton);
+        this.frameControlPanel.add(new JLabel());
+        this.frameControlPanel.add(this.framesLabel);
+        this.frameControlPanel.add(new JLabel());
+        this.frameControlPanel.add(this.framesBackButton);
+        this.frameControlPanel.add(this.frameJumpText);
+        this.frameControlPanel.add(this.framesForwardButton);
 
         /*
          * Add the video label and frameControlPanel to the video panel
          */
-        videoPanel.add(this.imageLabel);
-        videoPanel.add(frameControlPanel);
+        this.videoContainer.add(this.imageLabel);
+        this.videoPanel.add(this.videoContainer);
+        this.videoPanel.add(this.frameControlPanel);
         /*
          * Organize main window using grid layout
          */
@@ -160,8 +172,8 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
          * Add scroll panes and button panel to main window, from left to right
          * and top to bottom
          */
-        this.add(buttonPanel);
-        this.add(videoPanel);
+        this.add(this.buttonPanel);
+        this.add(this.videoPanel);
 
         // Set up the observers ----------------------------------------------
 
@@ -182,6 +194,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
                 }
             }
         });
+        this.imageLabel.addMouseListener(this);
 
         // Start the main application window --------------------------------
 
@@ -195,6 +208,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
         this.setBounds(30, 30, DEFAULT_WIDTH_OF_WINDOW,
                 DEFAULT_HEIGHT_OF_WINDOW);
         this.setVisible(true);
+
     }
 
     /**
@@ -290,10 +304,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
     public void loadFrame(BufferedImage img) {
         ImageIcon icon = new ImageIcon(img);
         this.imageLabel.setIcon(icon);
-        int heightOffset = (this.imageLabel.getHeight() - img.getHeight()) / 2;
-        int widthOffset = (this.imageLabel.getWidth() - img.getWidth()) / 2;
-        this.imageLabel.setBounds(widthOffset, heightOffset, img.getWidth(),
-                img.getHeight());
+
     }
 
     /*
@@ -364,12 +375,12 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
 
     @Override
     public int getFrameAreaHeight() {
-        return this.imageLabel.getHeight();
+        return this.videoContainer.getHeight();
     }
 
     @Override
     public int getFrameAreaWidth() {
-        return this.imageLabel.getWidth();
+        return this.videoContainer.getWidth();
     }
 
     @Override
@@ -384,6 +395,38 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView {
             i++;
         }
         return Integer.parseInt(sb.toString());
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        System.out.println("Image Clicked");
+        System.out.println("X-coord: " + e.getX());
+        System.out.println("Y-coord: " + e.getY());
+
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        // TODO Auto-generated method stub
+
     }
 
 }

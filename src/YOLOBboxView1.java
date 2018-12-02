@@ -6,6 +6,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
 
@@ -25,7 +26,7 @@ import javax.swing.text.NumberFormatter;
  */
 @SuppressWarnings("serial")
 public final class YOLOBboxView1 extends JFrame
-        implements YOLOBboxView, MouseListener {
+        implements YOLOBboxView, MouseListener, MouseMotionListener {
 
     /**
      * Controller object.
@@ -195,6 +196,7 @@ public final class YOLOBboxView1 extends JFrame
             }
         });
         this.imageLabel.addMouseListener(this);
+        this.imageLabel.addMouseMotionListener(this);
 
         // Start the main application window --------------------------------
 
@@ -402,7 +404,8 @@ public final class YOLOBboxView1 extends JFrame
         System.out.println("Image Clicked");
         System.out.println("X-coord: " + e.getX());
         System.out.println("Y-coord: " + e.getY());
-
+        System.out.println("Image Clicked");
+        this.controller.processMouseClickedEvent(e.getX(), e.getY());
     }
 
     @Override
@@ -426,6 +429,21 @@ public final class YOLOBboxView1 extends JFrame
     @Override
     public void mouseReleased(MouseEvent e) {
         // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void mouseDragged(MouseEvent arg0) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent arg0) {
+        System.out.println("Mouse Moved in image");
+        System.out.println("X-coord: " + arg0.getX());
+        System.out.println("Y-coord: " + arg0.getY());
+        this.controller.processMouseMovedEvent(arg0.getX(), arg0.getY());
 
     }
 

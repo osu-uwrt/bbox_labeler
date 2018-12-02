@@ -1,11 +1,10 @@
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
-
-import components.map.Map;
-import components.map.Map1L;
 
 /**
  * Model class.
@@ -20,8 +19,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private String videoLocation, exportLocation;
     private int itemIndex, currentFrame, frameRate, frameJump, totalFrames,
             videoWidth, videoHeight;
-    private Map<Integer, BBox> bbox;
-    private Map<Integer, YOLO> yolo;
+    private List<BBox> bbox;
+    private List<YOLO> yolo;
     private File file;
     private FFmpegFrameGrabber frameGrabber;
     private Image master;
@@ -40,9 +39,9 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.currentFrame = 0;
         this.frameRate = 0;
         this.frameJump = 2;
-        this.bbox = new Map1L<Integer, BBox>();
+        this.bbox = new LinkedList<BBox>();
         this.totalFrames = 0;
-        this.yolo = new Map1L<Integer, YOLO>();
+        this.yolo = new LinkedList<YOLO>();
         this.file = new File("");
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
         this.master = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
@@ -124,12 +123,12 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     }
 
     @Override
-    public Map<Integer, BBox> bbox() {
+    public List<BBox> bbox() {
         return this.bbox;
     }
 
     @Override
-    public Map<Integer, YOLO> yolo() {
+    public List<YOLO> yolo() {
         return this.yolo;
     }
 
@@ -173,6 +172,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setScaled(BufferedImage image) {
         this.scaled = image;
+        this.videoHeight = image.getHeight();
+        this.videoWidth = image.getWidth();
     }
 
     @Override

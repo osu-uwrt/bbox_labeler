@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import javax.swing.JFileChooser;
 
@@ -14,9 +15,6 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-
-import components.map.Map;
-import components.map.Map1L;
 
 /**
  * Controller class.
@@ -199,7 +197,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //file for every frame of the video and send it to the
         //location and then compress it into a .zip file
         this.processCV();
-        int largestFrameNumber = this.findLargestKeyValue(this.model.bbox());
+        int largestFrameNumber = this.model.bbox().size();
         int i = 0;
         while (i <= largestFrameNumber) {
             this.findYOLOValues(i);
@@ -286,6 +284,81 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         updateViewToMatchModel(this.model, this.view);
     }
 
+    @Override
+    public void processMouseClickedEvent(int x, int y) {
+        List<BBox> bbox = this.model.bbox();
+        BBox temp;
+        //if data for this frame already exists, load it. Else, start from scratch.
+        if (bbox.size() > this.model.currentFrame()
+                && bbox.get(this.model.currentFrame()) != null) {
+            temp = bbox.get(this.model.currentFrame());
+        } else {
+            temp = new BBox();
+        }
+        //get the proportion of the click relative to the frame
+        double dx = ((double) x) / this.model.scaled().getWidth();
+        double dy = ((double) y) / this.model.scaled().getHeight();
+        //set the pair of values based on the last pair that was set
+        if (temp.firstIsSetNext()) {
+            temp.setx1(dx);
+            temp.sety1(dy);
+        } else {
+            temp.setx2(dx);
+            temp.sety2(dy);
+        }
+        //add space to the end of the list if needed
+        while (bbox.size() - this.model.currentFrame() <= 0) {
+            bbox.add(bbox.size(), new BBox());
+        }
+        //set the data where it needs to be
+        bbox.set(this.model.currentFrame(), temp);
+        //Print out the list
+        System.out.println("Frame: " + this.model.currentFrame());
+        int i = 0;
+        while (i < bbox.size()) {
+            System.out.println(bbox.get(i).x1() + "," + bbox.get(i).y1() + " "
+                    + bbox.get(i).x2() + "," + bbox.get(i).y2());
+            i++;
+        }
+
+    }
+
+    @Override
+    public void processMouseEnteredEvent(int x, int y) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void processMouseExitedEvent(int x, int y) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void processMousePressedEvent(int x, int y) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void processMouseReleasedEvent(int x, int y) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void processDraggedEvent(int x, int y) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void processMouseMovedEvent(int x, int y) {
+        // TODO Auto-generated method stub
+
+    }
+
     /**
      * Processes the CV by taking the given bboxes and filling in the frames
      * between
@@ -299,41 +372,21 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      * given frame.
      */
     private void findYOLOValues(int frame) {
-        Map<Integer, BBox> bbox = this.model.bbox();
-        Map<Integer, YOLO> yolo = this.model.yolo();
-        Map.Pair<Integer, BBox> p = bbox.remove(frame);
+        List<BBox> bbox = this.model.bbox();
+        List<YOLO> yolo = this.model.yolo();
+        BBox p = bbox.remove(frame);
         //calculate the values for YOLO from the bbox
-        int width = (int) ((Math.abs(p.value().x1() - p.value().x2())
+        int width = (int) ((Math.abs(p.x1() - p.x2())
                 * this.model.videoWidth()));
-        int height = (int) ((Math.abs(p.value().y1() - p.value().y2())
+        int height = (int) ((Math.abs(p.y1() - p.y2())
                 * this.model.videoHeight()));
-        int x = (int) ((p.value().x1() + p.value().x2())
-                * this.model.videoWidth()) / 2;
-        int y = (int) ((p.value().y1() + p.value().y2())
-                * this.model.videoWidth()) / 2;
+        int x = (int) ((p.x1() + p.x2()) * this.model.videoWidth()) / 2;
+        int y = (int) ((p.y1() + p.y2()) * this.model.videoWidth()) / 2;
         //add the values to the yolo map
         YOLO ny = new YOLO(x, y, width, height);
         yolo.add(frame, ny);
         //re-add p to bbox
-        bbox.add(p.key(), p.value());
-    }
-
-    /**
-     * Finds the largest key value in the given map
-     */
-    private int findLargestKeyValue(Map<Integer, BBox> m) {
-        int largestKey = -1;
-        Map<Integer, BBox> tempMap = new Map1L<Integer, BBox>();
-        Map.Pair<Integer, BBox> p = m.removeAny();
-        while (m.size() > 0) {
-            p = m.removeAny();
-            if (largestKey < p.key()) {
-                largestKey = p.key();
-            }
-            tempMap.add(p.key(), p.value());
-        }
-        m = tempMap;
-        return largestKey;
+        bbox.add(this.model.currentFrame(), p);
     }
 
     /*

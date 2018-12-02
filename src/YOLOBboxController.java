@@ -122,4 +122,109 @@ public interface YOLOBboxController {
      */
     void processResizeEvent();
 
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processMouseClickedEvent(int x, int y);
+
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processMouseEnteredEvent(int x, int y);
+
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processMouseExitedEvent(int x, int y);
+
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processMousePressedEvent(int x, int y);
+
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processMouseReleasedEvent(int x, int y);
+
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processDraggedEvent(int x, int y);
+
+    /**
+     * Processes event to move the video forward the number of given frames.
+     *
+     * @param input
+     *            string to be copied
+     *
+     * @updates this.model, this.view
+     * @ensures <pre>
+     * this.model.input = input  and
+     * this.model.output = input  and
+     * [this.view has been updated to match this.model]
+     * </pre>
+     */
+    void processMouseMovedEvent(int x, int y);
+
 }

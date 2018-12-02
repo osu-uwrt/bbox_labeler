@@ -1,10 +1,10 @@
 /**
  * Class for a bounding box just holds 4 doubles
  *
- * @x1: the xth pixel of the frame for the first corner
- * @y1: the yth pixel of the frame for the first corner
- * @x2: the xth pixel of the frame for the second corner
- * @y2: the yth pixel of the frame for the second corner
+ * @x1: the proportion of the frame from the left for the first corner
+ * @y1: the proportion of the frame from the top for the first corner
+ * @x2: the proportion of the frame from the left for the second corner
+ * @y2: the proportion of the frame from the top for the second corner
  *
  * @author Derek Opdycke
  *
@@ -15,6 +15,7 @@ public class BBox {
     private double y1 = 0;
     private double x2 = 0;
     private double y2 = 0;
+    private boolean firstIsSetNext = true;
 
     public double x1() {
         return this.x1;
@@ -33,19 +34,27 @@ public class BBox {
     }
 
     public void setx1(double x) {
+        this.firstIsSetNext = false;
         this.x1 = x;
     }
 
     public void sety1(double y) {
+        this.firstIsSetNext = false;
         this.y1 = y;
     }
 
     public void setx2(double x) {
+        this.firstIsSetNext = true;
         this.x2 = x;
     }
 
     public void sety2(double y) {
+        this.firstIsSetNext = true;
         this.y2 = y;
+    }
+
+    public boolean firstIsSetNext() {
+        return this.firstIsSetNext;
     }
 
     /*

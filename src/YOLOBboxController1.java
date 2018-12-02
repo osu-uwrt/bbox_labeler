@@ -53,7 +53,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         int frameRate = model.frameRate();
         int frameJump = model.frameJump();
         int totalFrames = model.totalFrames();
-        Image image = model.scaled();
+        BufferedImage image = model.scaled();
+        image = redrawLines(image, model.bbox().get(model.currentFrame()));
+
         /*
          * Update view to reflect changes in model
          */
@@ -64,7 +66,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
         view.updateTotalFramesTextDisplay(totalFrames);
-        view.loadFrame((BufferedImage) image);
+        view.loadFrame(image);
+        System.out.println("Line Drawn");
 
     }
 
@@ -287,14 +290,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     @Override
     public void processMouseClickedEvent(int x, int y) {
         List<BBox> bbox = this.model.bbox();
-        BBox temp;
-        //if data for this frame already exists, load it. Else, start from scratch.
-        if (bbox.size() > this.model.currentFrame()
-                && bbox.get(this.model.currentFrame()) != null) {
-            temp = bbox.get(this.model.currentFrame());
-        } else {
-            temp = new BBox();
-        }
+        BBox temp = bbox.get(this.model.currentFrame());
         //get the proportion of the click relative to the frame
         double dx = ((double) x) / this.model.scaled().getWidth();
         double dy = ((double) y) / this.model.scaled().getHeight();
@@ -306,18 +302,18 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             temp.setx2(dx);
             temp.sety2(dy);
         }
-        //add space to the end of the list if needed
-        while (bbox.size() - this.model.currentFrame() <= 0) {
-            bbox.add(bbox.size(), new BBox());
-        }
         //set the data where it needs to be
         bbox.set(this.model.currentFrame(), temp);
         //Print out the list
         System.out.println("Frame: " + this.model.currentFrame());
         int i = 0;
         while (i < bbox.size()) {
-            System.out.println(bbox.get(i).x1() + "," + bbox.get(i).y1() + " "
-                    + bbox.get(i).x2() + "," + bbox.get(i).y2());
+            if (bbox.get(i).x1() + bbox.get(i).x2() + bbox.get(i).y1()
+                    + bbox.get(i).y2() > 0.00001) {
+                System.out.println("Frame " + i + ": " + bbox.get(i).x1() + ","
+                        + bbox.get(i).y1() + " " + bbox.get(i).x2() + ","
+                        + bbox.get(i).y2());
+            }
             i++;
         }
 
@@ -472,6 +468,25 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         g2.drawImage(srcImg, 0, 0, newWidth, newHeight, null);
         g2.dispose();
         return resizedImg;
+    }
+
+    private static BufferedImage redrawLines(BufferedImage image, BBox bbox) {
+        //draw lines for bounding boxes
+        int x = (int) (bbox.x1() * image.getWidth());
+        image.createGraphics().drawLine(x, 0, x, image.getHeight());
+        int y = (int) (bbox.y1() * image.getHeight());
+        image.createGraphics().drawLine(0, y, 0, image.getWidth());
+        x = (int) (bbox.x2() * image.getWidth());
+        image.createGraphics().drawLine(x, 0, x, image.getHeight());
+        y = (int) (bbox.y2() * image.getHeight());
+        image.createGraphics().drawLine(0, y, 0, image.getWidth());
+        //Print out the list
+        System.out.println("Frame: ?");
+        System.out.println("Frame ?: " + bbox.x1() + "," + bbox.y1() + " "
+                + bbox.x2() + "," + bbox.y2());
+        //draw lines for cursor
+        //image.createGraphics().drawLine(0, 30, image.getWidth(), 30);
+        return image;
     }
 
 }

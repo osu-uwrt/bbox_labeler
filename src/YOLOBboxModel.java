@@ -60,8 +60,20 @@ public interface YOLOBboxModel {
 
     void setScaled(BufferedImage image);
 
+    BufferedImage lines();
+
+    void setLines(BufferedImage image);
+
     int videoHeight();
 
     int videoWidth();
+
+    int lastKnownX();
+
+    void setLastKnownX(int x);
+
+    int lastKnownY();
+
+    void setLastKnownY(int x);
 
 }

@@ -25,6 +25,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private FFmpegFrameGrabber frameGrabber;
     private Image master;
     private BufferedImage scaled;
+    private BufferedImage lines;
 
     /**
      * Default constructor.
@@ -40,12 +41,14 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.frameRate = 0;
         this.frameJump = 2;
         this.bbox = new LinkedList<BBox>();
+        this.bbox.add(new BBox());
         this.totalFrames = 0;
         this.yolo = new LinkedList<YOLO>();
         this.file = new File("");
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
         this.master = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
         this.scaled = (BufferedImage) this.master;
+        this.lines = this.scaled;
         this.videoHeight = this.frameGrabber.getImageHeight();
         this.videoWidth = this.frameGrabber.getImageWidth();
     }
@@ -114,6 +117,9 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setTotalFrames(int x) {
         this.totalFrames = x;
+        while (this.bbox.size() < x) {
+            this.bbox.add(new BBox());
+        }
 
     }
 
@@ -184,6 +190,40 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public int videoWidth() {
         return this.videoWidth;
+    }
+
+    @Override
+    public BufferedImage lines() {
+        return this.lines;
+    }
+
+    @Override
+    public void setLines(BufferedImage lines) {
+        this.lines = lines;
+    }
+
+    @Override
+    public int lastKnownX() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public void setLastKnownX(int x) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public int lastKnownY() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public void setLastKnownY(int x) {
+        // TODO Auto-generated method stub
+
     }
 
 }

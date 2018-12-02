@@ -165,6 +165,7 @@ public final class YOLOBboxView1 extends JFrame
         this.videoContainer.add(this.imageLabel);
         this.videoPanel.add(this.videoContainer);
         this.videoPanel.add(this.frameControlPanel);
+        this.imageLabel.setOpaque(false);
         /*
          * Organize main window using grid layout
          */
@@ -304,9 +305,9 @@ public final class YOLOBboxView1 extends JFrame
 
     @Override
     public void loadFrame(BufferedImage img) {
+        System.out.println("Image Loaded");
         ImageIcon icon = new ImageIcon(img);
         this.imageLabel.setIcon(icon);
-
     }
 
     /*
@@ -440,9 +441,9 @@ public final class YOLOBboxView1 extends JFrame
 
     @Override
     public void mouseMoved(MouseEvent arg0) {
-        System.out.println("Mouse Moved in image");
-        System.out.println("X-coord: " + arg0.getX());
-        System.out.println("Y-coord: " + arg0.getY());
+        //System.out.println("Mouse Moved in image");
+        //System.out.println("X-coord: " + arg0.getX());
+        //System.out.println("Y-coord: " + arg0.getY());
         this.controller.processMouseMovedEvent(arg0.getX(), arg0.getY());
 
     }

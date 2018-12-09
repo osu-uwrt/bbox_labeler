@@ -1,11 +1,10 @@
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
-
-import components.map.Map;
-import components.map.Map1L;
 
 /**
  * Model class.
@@ -18,13 +17,16 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
      * Model variables.
      */
     private String videoLocation, exportLocation;
-    private int itemIndex, currentFrame, frameRate, frameJump, totalFrames;
-    private Map<Integer, BBox> bbox;
-    private Map<Integer, YOLO> yolo;
+    private int itemIndex, currentFrame, frameRate, frameJump, totalFrames,
+            videoWidth, videoHeight;
+    private List<BBox> bbox;
+    private List<YOLO> yolo;
     private File file;
     private FFmpegFrameGrabber frameGrabber;
     private Image master;
     private BufferedImage scaled;
+    private BufferedImage lines;
+    private double lastKnownX, lastKnownY;
 
     /**
      * Default constructor.
@@ -39,13 +41,19 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.currentFrame = 0;
         this.frameRate = 0;
         this.frameJump = 2;
-        this.bbox = new Map1L<Integer, BBox>();
+        this.bbox = new LinkedList<BBox>();
+        this.bbox.add(new BBox());
         this.totalFrames = 0;
-        this.yolo = new Map1L<Integer, YOLO>();
+        this.yolo = new LinkedList<YOLO>();
         this.file = new File("");
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
         this.master = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
         this.scaled = (BufferedImage) this.master;
+        this.lines = this.scaled;
+        this.videoHeight = this.frameGrabber.getImageHeight();
+        this.videoWidth = this.frameGrabber.getImageWidth();
+        this.lastKnownX = -1.0;
+        this.lastKnownY = -1.0;
     }
 
     @Override
@@ -112,6 +120,9 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setTotalFrames(int x) {
         this.totalFrames = x;
+        while (this.bbox.size() < x) {
+            this.bbox.add(new BBox());
+        }
 
     }
 
@@ -121,12 +132,12 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     }
 
     @Override
-    public Map<Integer, BBox> bbox() {
+    public List<BBox> bbox() {
         return this.bbox;
     }
 
     @Override
-    public Map<Integer, YOLO> yolo() {
+    public List<YOLO> yolo() {
         return this.yolo;
     }
 
@@ -148,6 +159,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setFrameGrabber(FFmpegFrameGrabber frameGrabber) {
         this.frameGrabber = frameGrabber;
+        this.videoHeight = this.frameGrabber.getImageHeight();
+        this.videoWidth = this.frameGrabber.getImageWidth();
     }
 
     @Override
@@ -168,6 +181,48 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setScaled(BufferedImage image) {
         this.scaled = image;
+        this.videoHeight = image.getHeight();
+        this.videoWidth = image.getWidth();
+    }
+
+    @Override
+    public int videoHeight() {
+        return this.videoHeight;
+    }
+
+    @Override
+    public int videoWidth() {
+        return this.videoWidth;
+    }
+
+    @Override
+    public BufferedImage lines() {
+        return this.lines;
+    }
+
+    @Override
+    public void setLines(BufferedImage lines) {
+        this.lines = lines;
+    }
+
+    @Override
+    public double lastKnownX() {
+        return this.lastKnownX;
+    }
+
+    @Override
+    public void setLastKnownX(double x) {
+        this.lastKnownX = x;
+    }
+
+    @Override
+    public double lastKnownY() {
+        return this.lastKnownY;
+    }
+
+    @Override
+    public void setLastKnownY(double y) {
+        this.lastKnownY = y;
     }
 
 }

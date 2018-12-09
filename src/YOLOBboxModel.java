@@ -1,10 +1,9 @@
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.List;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
-
-import components.map.Map;
 
 /**
  * Model interface.
@@ -41,9 +40,9 @@ public interface YOLOBboxModel {
 
     void setTotalFrames(int x);
 
-    Map<Integer, BBox> bbox();
+    List<BBox> bbox();
 
-    Map<Integer, YOLO> yolo();
+    List<YOLO> yolo();
 
     File file();
 
@@ -60,5 +59,21 @@ public interface YOLOBboxModel {
     BufferedImage scaled();
 
     void setScaled(BufferedImage image);
+
+    BufferedImage lines();
+
+    void setLines(BufferedImage image);
+
+    int videoHeight();
+
+    int videoWidth();
+
+    double lastKnownX();
+
+    void setLastKnownX(double x);
+
+    double lastKnownY();
+
+    void setLastKnownY(double y);
 
 }

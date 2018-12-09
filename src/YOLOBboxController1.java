@@ -1,10 +1,14 @@
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.awt.image.DataBufferByte;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import javax.swing.JFileChooser;
 
@@ -14,9 +18,6 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-
-import components.map.Map;
-import components.map.Map1L;
 
 /**
  * Controller class.
@@ -43,7 +44,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      * @param view
      *            the view
      */
-    private static void updateViewToMatchModel(YOLOBboxModel model,
+    private void updateViewToMatchModel(YOLOBboxModel model,
             YOLOBboxView view) {
         /*
          * Get model info
@@ -55,7 +56,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         int frameRate = model.frameRate();
         int frameJump = model.frameJump();
         int totalFrames = model.totalFrames();
-        Image image = model.scaled();
+        BufferedImage image = model.lines();
+
         /*
          * Update view to reflect changes in model
          */
@@ -66,7 +68,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
         view.updateTotalFramesTextDisplay(totalFrames);
-        view.loadFrame((BufferedImage) image);
+        view.loadFrame(image);
 
     }
 
@@ -84,7 +86,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect initial value of model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -100,7 +102,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -160,7 +162,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -183,7 +185,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -198,17 +200,14 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //TODO process the video and create a picture file and text
         //file for every frame of the video and send it to the
         //location and then compress it into a .zip file
+
+        //for now, just fill in the other bounding boxes
         this.processCV();
-        int largestFrameNumber = this.findLargestKeyValue(this.model.bbox());
-        int i = 0;
-        while (i <= largestFrameNumber) {
-            this.findYOLOValues(i);
-        }
 
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -220,13 +219,41 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
 
-        //TODO go back in the video a number of frames
-        //equal to the given number of frames
-
+        //update frame jump in the model
+        this.model.setFrameJump(this.view.getFrameJump());
+        FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+        int currentFrame = this.model.currentFrame();
+        Frame f = new Frame();
+        try {
+            frameGrabber.start();
+            int jump = this.model.frameJump();
+            //load the the frameJump-th previous frame
+            if ((jump + 1) < currentFrame) {
+                frameGrabber.setFrameNumber(currentFrame - (jump + 1));
+            } else {
+                frameGrabber.setFrameNumber(0);
+            }
+            f = frameGrabber.grabImage();
+            Java2DFrameConverter j = new Java2DFrameConverter();
+            System.out.println(f);
+            BufferedImage bi = j.convert(f);
+            System.out.println(bi);
+            this.model.setMaster(bi);
+            BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
+            this.model.setScaled(scaled);
+            this.model.setCurrentFrame(frameGrabber.getFrameNumber());
+            BufferedImage lines = deepCopy(scaled);
+            this.redrawLines(lines,
+                    this.model.bbox().get(this.model.currentFrame()));
+            this.model.setLines(lines);
+            frameGrabber.stop();
+        } catch (Exception e) {
+            System.out.println("Could not load next frame");
+        }
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -237,9 +264,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update model in response to this event
          */
-
-        //TODO go forward in the video a number of frames
-        //equal to the given number of frames
 
         //update frame jump in the model
         this.model.setFrameJump(this.view.getFrameJump());
@@ -265,6 +289,10 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
             this.model.setScaled(scaled);
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
+            BufferedImage lines = deepCopy(scaled);
+            this.redrawLines(lines,
+                    this.model.bbox().get(this.model.currentFrame()));
+            this.model.setLines(lines);
             frameGrabber.stop();
         } catch (Exception e) {
             System.out.println("Could not load next frame");
@@ -272,7 +300,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     @Override
@@ -280,10 +308,144 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         BufferedImage bi = (BufferedImage) this.model.master();
         BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
         this.model.setScaled(scaled);
+        BufferedImage lines = deepCopy(scaled);
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
         /*
          * Update view to reflect changes in model
          */
-        updateViewToMatchModel(this.model, this.view);
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMouseClickedEvent(int x, int y) {
+        List<BBox> bbox = this.model.bbox();
+        BBox temp = bbox.get(this.model.currentFrame());
+        //get the proportion of the click relative to the frame
+        double dx = ((double) x) / this.model.scaled().getWidth();
+        double dy = ((double) y) / this.model.scaled().getHeight();
+        //set the pair of values based on the last pair that was set
+        if (temp.firstIsSetNext()) {
+            temp.setx1(dx);
+            temp.sety1(dy);
+        } else {
+            temp.setx2(dx);
+            temp.sety2(dy);
+        }
+        //set the data where it needs to be
+        bbox.set(this.model.currentFrame(), temp);
+        //Print out the list
+        System.out.println("Frame: " + this.model.currentFrame());
+        int i = 0;
+        while (i < bbox.size()) {
+            if (bbox.get(i).x1() + bbox.get(i).x2() + bbox.get(i).y1()
+                    + bbox.get(i).y2() > 0.00001) {
+                System.out.println("Frame " + i + ": " + bbox.get(i).x1() + ","
+                        + bbox.get(i).y1() + " " + bbox.get(i).x2() + ","
+                        + bbox.get(i).y2());
+            }
+            i++;
+        }
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMouseEnteredEvent(int x, int y) {
+        this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
+        this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMouseExitedEvent(int x, int y) {
+        this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
+        this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMousePressedEvent(int x, int y) {
+        this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
+        this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMouseReleasedEvent(int x, int y) {
+        this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
+        this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMouseDraggedEvent(int x, int y) {
+        this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
+        this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processMouseMovedEvent(int x, int y) {
+        this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
+        this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
+        BufferedImage lines = deepCopy(this.model.scaled());
+        this.redrawLines(lines,
+                this.model.bbox().get(this.model.currentFrame()));
+        this.model.setLines(lines);
+
+        /*
+         * Update view to reflect changes in model
+         */
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
     /**
@@ -291,6 +453,92 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      * between
      */
     private void processCV() {
+        int i = 0;
+        List<BBox> bbox = this.model.bbox();
+
+        //get the first frame with a bounding box
+        while (i < bbox.size() && (bbox.get(i).x1() < 0 || bbox.get(i).y1() < 0
+                || bbox.get(i).x2() < 0 || bbox.get(i).y2() < 0)) {
+            i++;
+        }
+        //if one was found
+        if (i != bbox.size()) {
+            BBox first = bbox.get(i);
+            int firstIndex = i;
+            //get the last frame with a bounding box
+            i = bbox.size() - 1;
+            while (i > firstIndex
+                    && (bbox.get(i).x1() < 0 || bbox.get(i).y1() < 0
+                            || bbox.get(i).x2() < 0 || bbox.get(i).y2() < 0)) {
+                i--;
+            }
+            //if one other than the first one was found
+            if (i != firstIndex) {
+                int lastIndex = i;
+                int nextIndex;
+                do {
+
+                    //get the next frame after the first with a bounding box
+                    i = firstIndex + 1;
+                    while (i < bbox.size() && (bbox.get(i).x1() < 0
+                            || bbox.get(i).y1() < 0 || bbox.get(i).x2() < 0
+                            || bbox.get(i).y2() < 0)) {
+                        i++;
+                    }
+                    BBox next = bbox.get(i);
+                    nextIndex = i;
+                    //get the difference in frame numbers between the frames
+                    int indexDifference = nextIndex - firstIndex;
+                    //get the differences in height, width, x, and y between the frames
+                    //the data for the first and last frame
+                    double firstWidth = Math.abs(first.x1() - first.x2());
+                    double firstHeight = Math.abs(first.y1() - first.y2());
+                    double firstXCenter = (first.x1() + first.x2()) / 2;
+                    double firstYCenter = (first.y1() + first.y2()) / 2;
+                    double lastWidth = Math.abs(next.x1() - next.x2());
+                    double lastHeight = Math.abs(next.y1() - next.y2());
+                    double lastXCenter = (next.x1() + next.x2()) / 2;
+                    double lastYCenter = (next.y1() + next.y2()) / 2;
+                    //the differences between the first and last frame
+                    double heightDifference = lastHeight - firstHeight;
+                    double widthDifference = lastWidth - firstWidth;
+                    double xDifference = lastXCenter - firstXCenter;
+                    double yDifference = lastYCenter - firstYCenter;
+                    //the differences per frame between the first and last frame
+                    double heightDifferenceScaled = heightDifference
+                            / indexDifference;
+                    double widthDifferenceScaled = widthDifference
+                            / indexDifference;
+                    double xDifferenceScaled = xDifference / indexDifference;
+                    double yDifferenceScaled = yDifference / indexDifference;
+                    int currentIndex = firstIndex + 1;
+                    while (currentIndex < nextIndex) {
+                        //set the scaled differences for the frames inbetween
+                        //the values to set the next the next bbox to
+                        double xCenter = firstXCenter + xDifferenceScaled
+                                * (currentIndex - firstIndex);
+                        double yCenter = firstYCenter + yDifferenceScaled
+                                * (currentIndex - firstIndex);
+                        double width = firstWidth + widthDifferenceScaled
+                                * (currentIndex - firstIndex);
+                        double height = firstHeight + heightDifferenceScaled
+                                * (currentIndex - firstIndex);
+                        double x1 = xCenter - (width / 2);
+                        double y1 = yCenter - (height / 2);
+                        double x2 = xCenter + (width / 2);
+                        double y2 = yCenter + (height / 2);
+                        bbox.set(currentIndex, new BBox(x1, y1, x2, y2));
+                        currentIndex++;
+                    }
+                    firstIndex = nextIndex;
+                    first = next;
+                } while (firstIndex < lastIndex);
+            } else {
+                //no other bboxes were set
+            }
+        } else {
+            //no bboxes were set
+        }
 
     }
 
@@ -299,37 +547,21 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      * given frame.
      */
     private void findYOLOValues(int frame) {
-        Map<Integer, BBox> bbox = this.model.bbox();
-        Map<Integer, YOLO> yolo = this.model.yolo();
-        Map.Pair<Integer, BBox> p = bbox.remove(frame);
+        List<BBox> bbox = this.model.bbox();
+        List<YOLO> yolo = this.model.yolo();
+        BBox p = bbox.remove(frame);
         //calculate the values for YOLO from the bbox
-        int width = Math.abs(p.value().x1() - p.value().x2());
-        int height = Math.abs(p.value().y1() - p.value().y2());
-        int x = (p.value().x1() + p.value().x2()) / 2;
-        int y = (p.value().y1() + p.value().y2()) / 2;
+        int width = (int) ((Math.abs(p.x1() - p.x2())
+                * this.model.videoWidth()));
+        int height = (int) ((Math.abs(p.y1() - p.y2())
+                * this.model.videoHeight()));
+        int x = (int) ((p.x1() + p.x2()) * this.model.videoWidth()) / 2;
+        int y = (int) ((p.y1() + p.y2()) * this.model.videoWidth()) / 2;
         //add the values to the yolo map
         YOLO ny = new YOLO(x, y, width, height);
         yolo.add(frame, ny);
         //re-add p to bbox
-        bbox.add(p.key(), p.value());
-    }
-
-    /**
-     * Finds the largest key value in the given map
-     */
-    private int findLargestKeyValue(Map<Integer, BBox> m) {
-        int largestKey = -1;
-        Map<Integer, BBox> tempMap = new Map1L<Integer, BBox>();
-        Map.Pair<Integer, BBox> p = m.removeAny();
-        while (m.size() > 0) {
-            p = m.removeAny();
-            if (largestKey < p.key()) {
-                largestKey = p.key();
-            }
-            tempMap.add(p.key(), p.value());
-        }
-        m = tempMap;
-        return largestKey;
+        bbox.add(this.model.currentFrame(), p);
     }
 
     /*
@@ -415,6 +647,97 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         g2.drawImage(srcImg, 0, 0, newWidth, newHeight, null);
         g2.dispose();
         return resizedImg;
+    }
+
+    private void redrawLines(BufferedImage image, BBox bbox) {
+        Graphics2D g = image.createGraphics();
+        g.setColor(Color.BLACK);
+        //draw lines for bounding boxes
+        int x = (int) (bbox.x1() * image.getWidth());
+        g.drawLine(x, 0, x, image.getHeight());
+        int y = (int) (bbox.y1() * image.getHeight());
+        g.drawLine(0, y, image.getWidth(), y);
+        x = (int) (bbox.x2() * image.getWidth());
+        g.drawLine(x, 0, x, image.getHeight());
+        y = (int) (bbox.y2() * image.getHeight());
+        g.drawLine(0, y, image.getWidth(), y);
+        //Print out the list
+        System.out.println("Frame: ?");
+        System.out.println("Frame ?: " + bbox.x1() + "," + bbox.y1() + " "
+                + bbox.x2() + "," + bbox.y2());
+        //draw lines for cursor
+        if (this.model.lastKnownX() >= 0.0 && this.model.lastKnownY() >= 0) {
+            drawCrosshairs(image,
+                    (int) (this.model.lastKnownX() * image.getWidth()),
+                    (int) (this.model.lastKnownY() * image.getHeight()));
+        }
+    }
+
+    private static void drawCrosshairs(BufferedImage image, int x, int y) {
+        Graphics2D g = image.createGraphics();
+        g.setColor(Color.BLACK);
+        int dashStart = x;
+        final int DASH_LENGTH = 20;
+        //Drawing dashed line at: x = x);
+        //print the crosshairs
+        if (dashStart + (DASH_LENGTH / 2) < image.getWidth()) {
+            g.drawLine(dashStart, y, dashStart + (DASH_LENGTH / 2), y);
+        } else {
+            g.drawLine(dashStart, y, image.getWidth(), y);
+        }
+        if (dashStart - (DASH_LENGTH / 2) > 0) {
+            g.drawLine(dashStart, y, dashStart - (DASH_LENGTH / 2), y);
+        } else {
+            g.drawLine(dashStart, y, 0, y);
+        }
+        //print the rest of the dashed line
+        dashStart = x + (DASH_LENGTH / 2) + DASH_LENGTH;
+        while (dashStart + DASH_LENGTH < image.getWidth()) {
+            g.drawLine(dashStart, y, dashStart + DASH_LENGTH, y);
+            dashStart += DASH_LENGTH * 2;
+        }
+        g.drawLine(dashStart, y, image.getWidth(), y);
+        dashStart = (x - (DASH_LENGTH / 2)) - DASH_LENGTH;
+        while (dashStart - DASH_LENGTH > 0) {
+            g.drawLine(dashStart, y, dashStart - DASH_LENGTH, y);
+            dashStart -= DASH_LENGTH * 2;
+        }
+        g.drawLine(dashStart, y, 0, y);
+
+        //Drawing dashed line at: x = x);
+        dashStart = y;
+        //print the crosshairs
+        if (dashStart + (DASH_LENGTH / 2) < image.getHeight()) {
+            g.drawLine(x, dashStart, x, dashStart + (DASH_LENGTH / 2));
+        } else {
+            g.drawLine(x, dashStart, x, image.getHeight());
+        }
+        if (dashStart - (DASH_LENGTH / 2) > 0) {
+            g.drawLine(x, dashStart, x, dashStart - (DASH_LENGTH / 2));
+        } else {
+            g.drawLine(x, dashStart, x, 0);
+        }
+        //print the rest of the dashed line
+        dashStart = y + (DASH_LENGTH / 2) + DASH_LENGTH;
+        while (dashStart + DASH_LENGTH < image.getHeight()) {
+            g.drawLine(x, dashStart, x, dashStart + DASH_LENGTH);
+            dashStart += DASH_LENGTH * 2;
+        }
+        g.drawLine(x, dashStart, x, image.getHeight());
+        dashStart = (y - (DASH_LENGTH / 2)) - DASH_LENGTH;
+        while (dashStart - DASH_LENGTH > 0) {
+            g.drawLine(x, dashStart, x, dashStart - DASH_LENGTH);
+            dashStart -= DASH_LENGTH * 2;
+        }
+        g.drawLine(x, dashStart, x, 0);
+
+    }
+
+    static BufferedImage deepCopy(BufferedImage bi) {
+        ColorModel cm = bi.getColorModel();
+        boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();
+        WritableRaster raster = bi.copyData(null);
+        return new BufferedImage(cm, raster, isAlphaPremultiplied, null);
     }
 
 }

@@ -86,5 +86,4 @@ public interface YOLOBboxView extends ActionListener {
     public int getFrameAreaWidth();
 
     public int getFrameJump();
-
 }

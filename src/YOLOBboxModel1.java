@@ -26,6 +26,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private Image master;
     private BufferedImage scaled;
     private BufferedImage lines;
+    private double lastKnownX, lastKnownY;
 
     /**
      * Default constructor.
@@ -51,6 +52,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.lines = this.scaled;
         this.videoHeight = this.frameGrabber.getImageHeight();
         this.videoWidth = this.frameGrabber.getImageWidth();
+        this.lastKnownX = -1.0;
+        this.lastKnownY = -1.0;
     }
 
     @Override
@@ -203,27 +206,23 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     }
 
     @Override
-    public int lastKnownX() {
-        // TODO Auto-generated method stub
-        return 0;
+    public double lastKnownX() {
+        return this.lastKnownX;
     }
 
     @Override
-    public void setLastKnownX(int x) {
-        // TODO Auto-generated method stub
-
+    public void setLastKnownX(double x) {
+        this.lastKnownX = x;
     }
 
     @Override
-    public int lastKnownY() {
-        // TODO Auto-generated method stub
-        return 0;
+    public double lastKnownY() {
+        return this.lastKnownY;
     }
 
     @Override
-    public void setLastKnownY(int x) {
-        // TODO Auto-generated method stub
-
+    public void setLastKnownY(double y) {
+        this.lastKnownY = y;
     }
 
 }

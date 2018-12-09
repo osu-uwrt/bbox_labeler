@@ -11,10 +11,10 @@
  */
 public class BBox {
 
-    private double x1 = 0;
-    private double y1 = 0;
-    private double x2 = 0;
-    private double y2 = 0;
+    private double x1 = -1.0;
+    private double y1 = -1.0;
+    private double x2 = -1.0;
+    private double y2 = -1.0;
     private boolean firstIsSetNext = true;
 
     public double x1() {

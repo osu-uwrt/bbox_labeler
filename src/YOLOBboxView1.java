@@ -411,31 +411,31 @@ public final class YOLOBboxView1 extends JFrame
 
     @Override
     public void mouseEntered(MouseEvent e) {
-        // TODO Auto-generated method stub
+        this.controller.processMouseEnteredEvent(e.getX(), e.getY());
 
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
-        // TODO Auto-generated method stub
+        this.controller.processMouseExitedEvent(e.getX(), e.getY());
 
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-        // TODO Auto-generated method stub
+        this.controller.processMousePressedEvent(e.getX(), e.getY());
 
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        // TODO Auto-generated method stub
+        this.controller.processMouseReleasedEvent(e.getX(), e.getY());
 
     }
 
     @Override
     public void mouseDragged(MouseEvent arg0) {
-        // TODO Auto-generated method stub
+        this.controller.processMouseDraggedEvent(arg0.getX(), arg0.getY());
 
     }
 

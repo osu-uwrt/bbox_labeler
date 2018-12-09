@@ -68,12 +68,12 @@ public interface YOLOBboxModel {
 
     int videoWidth();
 
-    int lastKnownX();
+    double lastKnownX();
 
-    void setLastKnownX(int x);
+    void setLastKnownX(double x);
 
-    int lastKnownY();
+    double lastKnownY();
 
-    void setLastKnownY(int x);
+    void setLastKnownY(double y);
 
 }

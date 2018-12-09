@@ -210,7 +210,7 @@ public interface YOLOBboxController {
      * [this.view has been updated to match this.model]
      * </pre>
      */
-    void processDraggedEvent(int x, int y);
+    void processMouseDraggedEvent(int x, int y);
 
     /**
      * Processes event to move the video forward the number of given frames.

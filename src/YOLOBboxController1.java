@@ -7,9 +7,13 @@ import java.awt.image.ColorModel;
 import java.awt.image.DataBufferByte;
 import java.awt.image.WritableRaster;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -193,16 +197,87 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      */
     @Override
     public void processExportEvent() {
-        /*
-         * Update model in response to this event
-         */
 
         //TODO process the video and create a picture file and text
         //file for every frame of the video and send it to the
         //location and then compress it into a .zip file
 
-        //for now, just fill in the other bounding boxes
+        /*
+         * Update model in response to this event
+         */
+        //fill in missing BBoxes
         this.processCV();
+        String preName = "data/horse";
+        List<YOLO> yolo = this.model.yolo();
+        PrintWriter writer;
+        int digits;
+        //counter for iterating through yolo
+        int i = 0;
+        //the highest number to iterate to
+        int max = this.model.totalFrames() - 1;
+        //the number of digits that names should have
+        digits = 1;
+        double temp = max;
+        while (temp > 10) {
+            digits++;
+            temp /= 10;
+        }
+        //bring i to the first yolo
+        while (i < max) {
+            //get the YOLO values
+            this.findYOLOValues(i);
+            //iterate through the yolos and create the files for the ones with data
+            YOLO next = yolo.get(i);
+            if (next != null) {
+                /*
+                 * get the name for the files
+                 */
+                int iDigits = 1;
+                temp = i;
+                while (temp > 10) {
+                    iDigits++;
+                    temp /= 10;
+                }
+                StringBuilder name = new StringBuilder();
+                name.append('_');
+                int zeros = 0;
+                while (zeros + iDigits < digits) {
+                    name.append('0');
+                    zeros++;
+                }
+                name.append(i);
+                /*
+                 * output the text file
+                 */
+                try {
+                    writer = new PrintWriter(preName + name + ".txt", "UTF-8");
+                    //print [item index] [x] [y] [width] [height]
+                    writer.println(this.model.itemIndex() + " " + next.x() + " "
+                            + next.y() + " " + next.width() + " "
+                            + next.height());
+                    writer.close();
+                } catch (FileNotFoundException
+                        | UnsupportedEncodingException e) {
+                    System.err.println("Problem exporting to text file");
+                }
+                /*
+                 * output the image file
+                 */
+                try {
+                    File outputfile = new File(preName + name + ".jpg");
+                    FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+                    frameGrabber.setFrameNumber(i);
+                    Java2DFrameConverter j = new Java2DFrameConverter();
+                    BufferedImage bi = j.convert(frameGrabber.grabImage());
+                    ImageIO.write(bi, "jpg", outputfile);
+                } catch (Exception e) {
+                    System.err.println("Problem getting frame");
+                } catch (IOException e) {
+                    System.err.println("Problem exporting to jpg");
+                }
+                i++;
+            }
+        }
 
         /*
          * Update view to reflect changes in model
@@ -450,7 +525,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
     /**
      * Processes the CV by taking the given bboxes and filling in the frames
-     * between
+     * between using linear interpolation
      */
     private void processCV() {
         int i = 0;

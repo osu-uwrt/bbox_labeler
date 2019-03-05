@@ -230,6 +230,7 @@ public final class YOLOBboxView1 extends JFrame
         });
         this.imageLabel.addMouseListener(this);
         this.imageLabel.addMouseMotionListener(this);
+        this.fillInFramesButton.addActionListener(this);
 
         // Start the main application window --------------------------------
 
@@ -267,17 +268,6 @@ public final class YOLOBboxView1 extends JFrame
     @Override
     public void updateVideoLocationTextDisplay(String s) {
         this.videoLocationText.setText(s);
-    }
-
-    /**
-     * Updates export location display based on String provided as argument.
-     *
-     * @param s
-     *            new value of export location display
-     */
-    @Override
-    public void updateExportLocationTextDisplay(String s) {
-        this.usernameText.setText(s);
     }
 
     /**

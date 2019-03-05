@@ -610,10 +610,10 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         List<YOLO> yolo = this.model.yolo();
         BBox p = bbox.get(frame);
         //calculate the values for YOLO from the bbox
-        int width = (int) (Math.abs(p.x1() - p.x2()));
-        int height = (int) (Math.abs(p.y1() - p.y2()));
-        int x = (int) (p.x1() + p.x2()) / 2;
-        int y = (int) (p.y1() + p.y2()) / 2;
+        double width = (Math.abs(p.x1() - p.x2()));
+        double height = (Math.abs(p.y1() - p.y2()));
+        double x = (p.x1() + p.x2()) / 2;
+        double y = (p.y1() + p.y2()) / 2;
         //add the values to the yolo map
         YOLO ny = new YOLO(x, y, width, height);
         yolo.add(frame, ny);

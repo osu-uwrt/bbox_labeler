@@ -26,14 +26,6 @@ public interface YOLOBboxView extends ActionListener {
     void updateVideoLocationTextDisplay(String s);
 
     /**
-     * Updates export location display based on String provided as argument.
-     *
-     * @param s
-     *            new value of export location display
-     */
-    void updateExportLocationTextDisplay(String s);
-
-    /**
      * Updates item index display based on integer provided as argument.
      *
      * @param i

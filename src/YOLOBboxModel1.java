@@ -1,8 +1,11 @@
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 
@@ -16,7 +19,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     /**
      * Model variables.
      */
-    private String videoLocation, exportLocation;
+    private String videoLocation, username, password;
     private int itemIndex, currentFrame, frameRate, frameJump, totalFrames,
             videoWidth, videoHeight;
     private List<BBox> bbox;
@@ -35,24 +38,39 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         /*
          * Initialize model
          */
-        this.videoLocation = "";
-        this.exportLocation = "";
-        this.itemIndex = 0;
-        this.currentFrame = 0;
-        this.frameRate = 0;
-        this.frameJump = 2;
-        this.bbox = new LinkedList<BBox>();
+        this.videoLocation = "";//File location of the video
+        this.username = "";//the username for logging into Box
+        this.password = "";//the password for logging into Box
+        this.itemIndex = 0;//index of the item being identified
+        this.currentFrame = 0;//the index of the frame that is being shown
+        this.frameRate = 0;//the frame rate of the given video
+        this.frameJump = 2;//the number of frames to jump forward or backward
+        this.bbox = new LinkedList<BBox>();//holds the bbox values for each frame
         this.bbox.add(new BBox());
-        this.totalFrames = 0;
-        this.yolo = new LinkedList<YOLO>();
-        this.file = new File("");
+        this.totalFrames = 0;//the total number of frames in the video
+        this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
+        this.file = new File("");//the video file
+        //used to grab individual frames from the video
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
-        this.master = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
+        try {
+            //the untouched version of a frame
+            this.master = ImageIO.read(new File("data/default.png"));
+        } catch (IOException e) {
+            System.out.println("Default image not found");
+            this.master = new BufferedImage(200, 200,
+                    BufferedImage.TYPE_INT_RGB);
+        }
+        //the scaled version of a frame
         this.scaled = (BufferedImage) this.master;
+        //the scaled version of a frame with crosshairs drawn on it
         this.lines = this.scaled;
+        //the height of the video
         this.videoHeight = this.frameGrabber.getImageHeight();
+        //the width of the video
         this.videoWidth = this.frameGrabber.getImageWidth();
+        //the last known x-coordinate of the mouse on the video
         this.lastKnownX = -1.0;
+        //the last known y-coordinate of the mouse on the video
         this.lastKnownY = -1.0;
     }
 
@@ -64,16 +82,6 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public String videoLocation() {
         return this.videoLocation;
-    }
-
-    @Override
-    public void setExportLocation(String el) {
-        this.exportLocation = el;
-    }
-
-    @Override
-    public String exportLocation() {
-        return this.exportLocation;
     }
 
     @Override
@@ -223,6 +231,26 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setLastKnownY(double y) {
         this.lastKnownY = y;
+    }
+
+    @Override
+    public String username() {
+        return this.username;
+    }
+
+    @Override
+    public void setUsername(String un) {
+        this.username = un;
+    }
+
+    @Override
+    public String password() {
+        return this.password;
+    }
+
+    @Override
+    public void setPassword(String pw) {
+        this.password = pw;
     }
 
 }

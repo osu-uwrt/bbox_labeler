@@ -15,6 +15,7 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
+import javax.swing.Timer;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -41,6 +42,14 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     private final YOLOBboxView view;
 
     /**
+     * Timer for quickly cycling through frames Is not currently used
+     */
+    private Timer timer;
+
+    //TODO: change defaultDirectory
+    private final String defaultDirectory = "data\\Wildlife.wmv";
+
+    /**
      * Updates view to display model.
      *
      * @param model
@@ -54,7 +63,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Get model info
          */
         String videoLocation = model.videoLocation();
-        String exportLocation = model.exportLocation();
+        String username = model.username();
+        String password = model.password();
         int itemIndex = model.itemIndex();
         int currentFrame = model.currentFrame();
         int frameRate = model.frameRate();
@@ -66,7 +76,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect changes in model
          */
         view.updateVideoLocationTextDisplay(videoLocation);
-        view.updateExportLocationTextDisplay(exportLocation);
+        view.updateUsernameTextDisplay(username);
+        view.updatePasswordTextDisplay(password);
         view.updateItemIndexTextDisplay(itemIndex);
         view.updateCurrentFrameTextDisplay(currentFrame);
         view.updateFrameRateTextDisplay(frameRate);
@@ -87,6 +98,11 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     public YOLOBboxController1(YOLOBboxModel model, YOLOBboxView view) {
         this.model = model;
         this.view = view;
+        BufferedImage scaled = (BufferedImage) this
+                .getScaledImage(this.model.master());
+        this.model.setScaled(scaled);
+        BufferedImage lines = deepCopy(scaled);
+        this.model.setLines(lines);
         /*
          * Update view to reflect initial value of model
          */
@@ -102,7 +118,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
         this.model.setVideoLocation("");
-        this.model.setExportLocation("");
+        this.model.setUsername("");
+        this.model.setPassword("");
+        this.model.setItemIndex(0);
         /*
          * Update view to reflect changes in model
          */
@@ -119,9 +137,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     public void processBrowseVideoLocationEvent() {
         //Create a file chooser
         final JFileChooser fc = new JFileChooser();
-        //TODO remove the next line. It is only there for testing.
-        fc.setCurrentDirectory(new File(
-                "C:\\Users\\Public\\Videos\\Sample Videos\\Wildlife.wmv"));
+        fc.setCurrentDirectory(new File(this.defaultDirectory));
         int returnVal = fc.showOpenDialog(fc);
 
         //if they chose a file
@@ -152,9 +168,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                 }
                 frameGrabber.stop();
 
-                /*
-                 * Update model in response to this event
-                 */
                 this.model.setVideoLocation(String.valueOf(file));
                 this.model.setFile(file);
                 this.model.setCurrentFrame(frameGrabber.getFrameNumber());
@@ -170,82 +183,33 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     }
 
     /**
-     * Processes BrowseExportLocation event.
-     */
-    @Override
-    public void processBrowseExportLocationEvent() {
-        /*
-         * Update model in response to this event
-         */
-        //Create a file chooser
-        final JFileChooser fc = new JFileChooser();
-        int returnVal = fc.showOpenDialog(fc);
-
-        if (returnVal == JFileChooser.APPROVE_OPTION) {
-            File file = fc.getSelectedFile();
-
-            this.model.setExportLocation(String.valueOf(file));
-        }
-        /*
-         * Update view to reflect changes in model
-         */
-        this.updateViewToMatchModel(this.model, this.view);
-    }
-
-    /**
      * Processes export event.
      */
     @Override
     public void processExportEvent() {
-
-        //TODO process the video and create a picture file and text
-        //file for every frame of the video and send it to the
-        //location and then compress it into a .zip file
-
         /*
-         * Update model in response to this event
+         * TODO: change naming convention folderName = {ITEM_NAME} fileName =
+         * {ITEM_NAME} + "_" + {USERNAME} + "_" + {FRAME#} + ".jpg"
          */
-        //fill in missing BBoxes
-        this.processCV();
+
         String preName = "data/horse";
         List<YOLO> yolo = this.model.yolo();
         PrintWriter writer;
-        int digits;
         //counter for iterating through yolo
         int i = 0;
         //the highest number to iterate to
         int max = this.model.totalFrames() - 1;
-        //the number of digits that names should have
-        digits = 1;
-        double temp = max;
-        while (temp > 10) {
-            digits++;
-            temp /= 10;
-        }
         //bring i to the first yolo
         while (i < max) {
             //get the YOLO values
             this.findYOLOValues(i);
             //iterate through the yolos and create the files for the ones with data
             YOLO next = yolo.get(i);
-            if (next != null) {
-                /*
-                 * get the name for the files
-                 */
-                int iDigits = 1;
-                temp = i;
-                while (temp > 10) {
-                    iDigits++;
-                    temp /= 10;
-                }
-                StringBuilder name = new StringBuilder();
-                name.append('_');
-                int zeros = 0;
-                while (zeros + iDigits < digits) {
-                    name.append('0');
-                    zeros++;
-                }
-                name.append(i);
+            if (next.x() > 0.0 && next.y() > 0.0 && next.width() > 0.0
+                    && next.height() > 0.0) {
+                String format = String.format("%%0%dd",
+                        String.valueOf(max).length());
+                String name = "_" + String.format(format, i);
                 /*
                  * output the text file
                  */
@@ -266,23 +230,43 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                 try {
                     File outputfile = new File(preName + name + ".jpg");
                     FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+                    frameGrabber.start();
                     frameGrabber.setFrameNumber(i);
                     Java2DFrameConverter j = new Java2DFrameConverter();
                     BufferedImage bi = j.convert(frameGrabber.grabImage());
                     ImageIO.write(bi, "jpg", outputfile);
+                    frameGrabber.close();
                 } catch (Exception e) {
                     System.err.println("Problem getting frame");
+                    e.printStackTrace();
                 } catch (IOException e) {
                     System.err.println("Problem exporting to jpg");
+                    e.printStackTrace();
                 }
-                i++;
             }
+            i++;
         }
+        /*
+         * compress the folder into a zip file
+         */
+        //TODO compress it into a .zip file
 
         /*
          * Update view to reflect changes in model
          */
         this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processReviewEvent() {
+        /*
+         * TODO: Open new window to display the preview in full screen
+         */
+    }
+
+    @Override
+    public void processFillInFramesEvent() {
+        this.processCV();
     }
 
     /**
@@ -614,7 +598,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         } else {
             //no bboxes were set
         }
-
+        System.out.println("done cv");
     }
 
     /**
@@ -624,22 +608,20 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     private void findYOLOValues(int frame) {
         List<BBox> bbox = this.model.bbox();
         List<YOLO> yolo = this.model.yolo();
-        BBox p = bbox.remove(frame);
+        BBox p = bbox.get(frame);
         //calculate the values for YOLO from the bbox
-        int width = (int) ((Math.abs(p.x1() - p.x2())
-                * this.model.videoWidth()));
-        int height = (int) ((Math.abs(p.y1() - p.y2())
-                * this.model.videoHeight()));
-        int x = (int) ((p.x1() + p.x2()) * this.model.videoWidth()) / 2;
-        int y = (int) ((p.y1() + p.y2()) * this.model.videoWidth()) / 2;
+        int width = (int) (Math.abs(p.x1() - p.x2()));
+        int height = (int) (Math.abs(p.y1() - p.y2()));
+        int x = (int) (p.x1() + p.x2()) / 2;
+        int y = (int) (p.y1() + p.y2()) / 2;
         //add the values to the yolo map
         YOLO ny = new YOLO(x, y, width, height);
         yolo.add(frame, ny);
-        //re-add p to bbox
-        bbox.add(this.model.currentFrame(), p);
     }
 
     /*
+     * This is not my code. I found it online and just removed some unneeded
+     * parts. Not currently used but might be needed for better object tracking.
      * Converts a buffered image to a Mat needed for opencv
      */
     private static Mat img3Mat(BufferedImage bi) {
@@ -650,6 +632,10 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         return mat;
     }
 
+    /*
+     * This is not my code. I found it online and just removed some unneeded
+     * parts. Not currently used but might be needed for better object tracking.
+     */
     public static Mat img2Mat(BufferedImage in) {
         Mat out;
         byte[] data;
@@ -680,6 +666,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     }
 
     /*
+     * This is not my code. I found it online and just removed some unneeded
+     * parts. Not currently used but might be needed for better object tracking.
      * Converts a Mat to a buffered image
      */
     private static BufferedImage mat2Img(Mat in) {
@@ -808,6 +796,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
     }
 
+    /*
+     * This is not my code. I found it online.
+     */
     static BufferedImage deepCopy(BufferedImage bi) {
         ColorModel cm = bi.getColorModel();
         boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();

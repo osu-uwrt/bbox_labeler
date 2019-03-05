@@ -16,9 +16,13 @@ public interface YOLOBboxModel {
 
     void setVideoLocation(String vl);
 
-    String exportLocation();
+    String username();
 
-    void setExportLocation(String el);
+    void setUsername(String un);
+
+    String password();
+
+    void setPassword(String pw);
 
     int itemIndex();
 

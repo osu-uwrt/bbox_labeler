@@ -86,4 +86,12 @@ public interface YOLOBboxView extends ActionListener {
     public int getFrameAreaWidth();
 
     public int getFrameJump();
+
+    public void update();
+
+    public void toggleButtons();
+
+    public void updateUsernameTextDisplay(String s);
+
+    public void updatePasswordTextDisplay(String s);
 }

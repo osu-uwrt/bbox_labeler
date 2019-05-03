@@ -1,4 +1,5 @@
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 
 /**
  * View interface.
@@ -25,4 +26,6 @@ public interface NewSessionView extends ActionListener {
     public void addDropdownItem(String text);
 
     public void closeWindow();
+
+    public void addVideo(BufferedImage video, String text, Boolean inColor);
 }

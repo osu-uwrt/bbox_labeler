@@ -1,8 +1,13 @@
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
+import javax.imageio.ImageIO;
+
 import com.box.sdk.BoxAPIConnection;
+import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxItem;
 import com.box.sdk.BoxItem.Info;
@@ -23,6 +28,11 @@ public final class NewSessionController1 implements NewSessionController {
      * View object.
      */
     private final NewSessionView view;
+
+    /**
+     * Can be 32, 64, 128, and 256 while using png
+     */
+    private int thumbnailSize = 128;
 
     /**
      * Constructor; connects {@code this} to the model and view it coordinates.
@@ -53,9 +63,52 @@ public final class NewSessionController1 implements NewSessionController {
                             this.model.pathToData());
                     //populate dropdown box
                     this.populateDropdownBox(videoFolder);
-                    //select the lowest value of the dropdown box
 
                     //find videos for that class
+                    String selectedClass = this.view.getSelectedClass();
+                    String[] classPath = { selectedClass };
+                    videoFolder = this.getSubFolder(videoFolder, classPath);
+                    //add each video to the view
+                    Iterator<Info> it = videoFolder.getChildren().iterator();
+                    System.out.println("1");
+                    while (it.hasNext()) {
+                        System.out.println("2");
+                        Info info = it.next();
+                        if (info instanceof BoxFile.Info) {
+                            BoxFile file = new BoxFile(api, info.getID());
+                            System.out.println("3");
+                            //get the thumbnail
+                            byte[] thumbnail = file.getThumbnail(
+                                    BoxFile.ThumbnailFileType.PNG,
+                                    this.thumbnailSize, this.thumbnailSize,
+                                    this.thumbnailSize, this.thumbnailSize);
+                            System.out.println("Thumbnail found");
+                            System.out.println(thumbnail.toString());
+                            //get the name of the file
+                            String name = info.getName();
+                            //add the video
+                            try {
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                            } catch (IOException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
+                        }
+                    }
                 } else {
                     //couldnt find the path
                     System.out.print("Could not find path to "

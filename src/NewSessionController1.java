@@ -103,6 +103,21 @@ public final class NewSessionController1 implements NewSessionController {
                                 this.view.addVideo(ImageIO.read(
                                         new ByteArrayInputStream(thumbnail)),
                                         name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
+                                this.view.addVideo(ImageIO.read(
+                                        new ByteArrayInputStream(thumbnail)),
+                                        name, true);
                             } catch (IOException e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();

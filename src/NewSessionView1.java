@@ -41,9 +41,11 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
      * related constants.
      */
     private static final int ROWS_IN_LABEL_PANEL_GRID = 1,
-            COLUMNS_IN_LABEL_PANEL_GRID = 2, DEFAULT_WIDTH_OF_WINDOW = 600,
-            DEFAULT_HEIGHT_OF_WINDOW = 400, ROWS_IN_A_VIDEO_PANEL = 2,
+            COLUMNS_IN_LABEL_PANEL_GRID = 2, DEFAULT_WIDTH_OF_WINDOW = 640,
+            DEFAULT_HEIGHT_OF_WINDOW = 420, ROWS_IN_A_VIDEO_PANEL = 2,
             COLUMNS_IN_A_VIDEO_PANEL = 1, COLUMNS_IN_VIDEO_PANEL = 4;
+    private static final int[] RGB_NEUTRAL = { 0, 64, 255 };
+    private static final int[] RGB_SELECTED = { 0, 255, 36 };
 
     /**
      * Buttons.
@@ -59,6 +61,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
      * Panels
      */
     private final JPanel labelPanel;
+    private final JPanel videoPanel;
     private final JScrollPane videoScrollPane;
     private final JSplitPane splitMain;
     private final JSplitPane splitHeader;
@@ -117,6 +120,10 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         this.videoScrollPane = new JScrollPane(
                 JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        this.videoPanel = new JPanel();
+        this.videoPanel
+                .setLayout(new BoxLayout(this.videoPanel, BoxLayout.Y_AXIS));
+        this.videoScrollPane.getViewport().add(this.videoPanel);
         this.splitMain = new JSplitPane();
         this.splitMain.setOrientation(JSplitPane.VERTICAL_SPLIT);
         this.splitMain.setDividerSize(1);
@@ -248,38 +255,16 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         this.classComboBox.addItem(text);
     }
 
+    private void addVideo2(BufferedImage video, String text, Boolean inColor) {
+
+    }
+
     @Override
     public void addVideo(BufferedImage video, String text, Boolean inColor) {
         /*
          * Build this video panel
          */
-        JPanel outer = new JPanel();
-        outer.setBorder(BorderFactory
-                .createLineBorder(new java.awt.Color(169, 169, 169), 4));
-        JSplitPane videoPane = new JSplitPane();
-        videoPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-        videoPane.setDividerSize(1);
-        videoPane.setEnabled(false);
-        videoPane.setDividerLocation((132));
-        JLabel thumbnail = new JLabel();
-        JLabel name = new JLabel();
-        if (!inColor) {
-            //change the image to grayscale
-            ImageFilter filter = new GrayFilter(true, 50);
-            ImageProducer producer = new FilteredImageSource(video.getSource(),
-                    filter);
-            Image image = Toolkit.getDefaultToolkit().createImage(producer);
-            thumbnail.setIcon(new ImageIcon(image));
-        } else {
-            thumbnail.setIcon(new ImageIcon(video));
-        }
-        thumbnail.setHorizontalAlignment(SwingConstants.CENTER);
-        name.setText(text);
-        videoPane.setTopComponent(thumbnail);
-        videoPane.setBottomComponent(name);
-        outer.add(videoPane);
-        outer.setMaximumSize(new Dimension(
-                this.videoScrollPane.getViewport().getWidth() / 4, 180));
+        JPanel outer = this.makeVideoPanel(video, text, inColor);
         /*
          * Insert this video panel
          */
@@ -290,7 +275,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
             this.currentVideoPanel = new JPanel();
             this.currentVideoPanel.setLayout(
                     new BoxLayout(this.currentVideoPanel, BoxLayout.X_AXIS));
-            this.videoScrollPane.getViewport().add(this.currentVideoPanel);
+            this.videoPanel.add(this.currentVideoPanel);
             this.count = 0;
         }
         this.count++;
@@ -299,13 +284,15 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         this.currentVideoPanel.add(outer);
     }
 
-    private void addVideo2(BufferedImage video, String text, Boolean inColor) {
-        /*
-         * Build this video panel
-         */
+    private JPanel makeVideoPanel(BufferedImage video, String text,
+            Boolean inColor) {
+        //Build the outer panel
         JPanel outer = new JPanel();
-        outer.setBorder(BorderFactory
-                .createLineBorder(new java.awt.Color(169, 169, 169), 4));
+        outer.setMaximumSize(new Dimension(
+                (this.videoScrollPane.getViewport().getWidth() - 20) / 4, 180));
+        outer.setBorder(BorderFactory.createLineBorder(new java.awt.Color(
+                RGB_NEUTRAL[0], RGB_NEUTRAL[1], RGB_NEUTRAL[2]), 3));
+        //build the split pane
         JSplitPane videoPane = new JSplitPane();
         videoPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
         videoPane.setDividerSize(1);
@@ -321,32 +308,15 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
             Image image = Toolkit.getDefaultToolkit().createImage(producer);
             thumbnail.setIcon(new ImageIcon(image));
         } else {
+            //keep the image in color
             thumbnail.setIcon(new ImageIcon(video));
         }
         thumbnail.setHorizontalAlignment(SwingConstants.CENTER);
-        name.setText(text);
+        name.setText("<html>" + text + "</html>");
         videoPane.setTopComponent(thumbnail);
         videoPane.setBottomComponent(name);
         outer.add(videoPane);
-        /*
-         * Insert this video panel
-         */
-        //Does it need to be on a new row?
-        if (this.count == COLUMNS_IN_VIDEO_PANEL) {
-            //make a new row
-            System.out.println("make a new row");
-            this.currentVideoPanel = new JPanel();
-            this.currentVideoPanel.setLayout(
-                    new BoxLayout(this.currentVideoPanel, BoxLayout.X_AXIS));
-            outer.setMaximumSize(new Dimension(
-                    this.videoScrollPane.getViewport().getWidth() / 4, 180));
-            this.videoScrollPane.getViewport().add(this.currentVideoPanel);
-            this.count = 0;
-        }
-        this.count++;
-        //add it to the current one
-        System.out.println("add the video");
-        this.currentVideoPanel.add(outer);
+        return outer;
     }
 
     @Override

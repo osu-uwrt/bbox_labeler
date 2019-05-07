@@ -1,3 +1,4 @@
+import java.awt.Color;
 import java.util.List;
 
 import javax.swing.JPanel;
@@ -20,5 +21,17 @@ public interface NewSessionModel {
     public String[] pathToVideos();
 
     public String[] pathToData();
+
+    public String getNameOfSelectedVideo();
+
+    public void setNameOfSelectedVideo(String name);
+
+    public int[] getRGBNeutral();
+
+    public int[] getRGBSelected();
+
+    public Color getColorNeutral();
+
+    public Color getColorSelected();
 
 }

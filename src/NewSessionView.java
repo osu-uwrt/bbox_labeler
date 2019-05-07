@@ -1,5 +1,9 @@
+import java.awt.Color;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.util.LinkedList;
+
+import javax.swing.JPanel;
 
 /**
  * View interface.
@@ -17,8 +21,6 @@ public interface NewSessionView extends ActionListener {
      */
     void registerObserver(NewSessionController controller);
 
-    public void toggleButtons();
-
     public String getSelectedClass();
 
     public String getSelectedVideo();
@@ -27,5 +29,16 @@ public interface NewSessionView extends ActionListener {
 
     public void closeWindow();
 
-    public void addVideo(BufferedImage video, String text, Boolean inColor);
+    public void addVideo(BufferedImage video, String text, Boolean inColor,
+            Color color);
+
+    public void colorBorder(JPanel jpanel, int[] rgb);
+
+    public LinkedList<JPanel> getVideoPanelsList();
+
+    public void removeAllVideos();
+
+    public void enableButton();
+
+    public void addListenerToComboBox();
 }

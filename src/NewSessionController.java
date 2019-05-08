@@ -1,3 +1,5 @@
+import javax.swing.JPanel;
+
 /**
  * Controller interface.
  *
@@ -19,5 +21,9 @@
 public interface NewSessionController {
 
     void processBeginLabellingEvent();
+
+    void processPanelSelect(JPanel jpanel);
+
+    void processClassSelect();
 
 }

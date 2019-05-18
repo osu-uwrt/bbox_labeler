@@ -17,7 +17,6 @@ import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.text.NumberFormatter;
@@ -56,9 +55,8 @@ public final class YOLOBboxView1 extends JFrame
     /**
      * Text areas.
      */
-    private final JTextArea videoLocationText, usernameText;
+    private final JTextArea videoLocationText;
     private final JFormattedTextField itemIndexText, frameJumpText;
-    private final JPasswordField passwordText;
 
     /**
      * Buttons.
@@ -91,7 +89,6 @@ public final class YOLOBboxView1 extends JFrame
          * Create widgets
          */
         this.videoLocationText = new JTextArea("");
-        this.usernameText = new JTextArea("");
         NumberFormat format = NumberFormat.getInstance();
         NumberFormatter formatter = new NumberFormatter(format);
         formatter.setValueClass(Integer.class);
@@ -101,7 +98,6 @@ public final class YOLOBboxView1 extends JFrame
         this.itemIndexText = new JFormattedTextField(formatter);
         this.frameJumpText = new JFormattedTextField(formatter);
         this.frameJumpText.setText("1");
-        this.passwordText = new JPasswordField();
         this.browseVideoLocationButton = new JButton("Browse for video");
         this.reviewButton = new JButton("Review");
         this.resetButton = new JButton("Reset");
@@ -122,12 +118,7 @@ public final class YOLOBboxView1 extends JFrame
         this.videoLocationText.setEditable(true);
         this.videoLocationText.setLineWrap(true);
         this.videoLocationText.setAutoscrolls(true);
-        this.usernameText.setEditable(true);
-        this.usernameText.setLineWrap(true);
-        this.usernameText.setAutoscrolls(true);
         this.itemIndexText.setEditable(true);
-        this.passwordText.setEditable(true);
-        this.passwordText.setAutoscrolls(true);
         this.frameJumpText.setEditable(true);
 
         /*
@@ -156,9 +147,7 @@ public final class YOLOBboxView1 extends JFrame
         this.buttonPanel.add(this.itemIndexLabel);
         this.buttonPanel.add(this.itemIndexText);
         this.buttonPanel.add(this.usernameLabel);
-        this.buttonPanel.add(this.usernameText);
         this.buttonPanel.add(this.passwordLabel);
-        this.buttonPanel.add(this.passwordText);
         this.buttonPanel.add(this.fillInFramesButton);
         this.buttonPanel.add(this.reviewButton);
         this.buttonPanel.add(this.exportButton);
@@ -323,16 +312,6 @@ public final class YOLOBboxView1 extends JFrame
     @Override
     public void updateFrameJumpTextDisplay(int i) {
         this.frameJumpText.setText(String.valueOf(i));
-    }
-
-    @Override
-    public void updateUsernameTextDisplay(String s) {
-        this.usernameText.setText(s);
-    }
-
-    @Override
-    public void updatePasswordTextDisplay(String s) {
-        this.passwordText.setText(s);
     }
 
     @Override

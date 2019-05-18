@@ -1,5 +1,6 @@
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -11,10 +12,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -63,8 +66,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Get model info
          */
         String videoLocation = model.videoLocation();
-        String username = model.username();
-        String password = model.password();
         int itemIndex = model.itemIndex();
         int currentFrame = model.currentFrame();
         int frameRate = model.frameRate();
@@ -76,8 +77,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect changes in model
          */
         view.updateVideoLocationTextDisplay(videoLocation);
-        view.updateUsernameTextDisplay(username);
-        view.updatePasswordTextDisplay(password);
         view.updateItemIndexTextDisplay(itemIndex);
         view.updateCurrentFrameTextDisplay(currentFrame);
         view.updateFrameRateTextDisplay(frameRate);
@@ -107,6 +106,19 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect initial value of model
          */
         this.updateViewToMatchModel(this.model, this.view);
+
+        try {
+            JOptionPane.showMessageDialog(null,
+                    YOLOBboxController1.class.getProtectionDomain()
+                            .getCodeSource().getLocation().toURI().getPath()
+                            .toString());
+        } catch (HeadlessException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -118,8 +130,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
         this.model.setVideoLocation("");
-        this.model.setUsername("");
-        this.model.setPassword("");
         this.model.setItemIndex(0);
         /*
          * Update view to reflect changes in model

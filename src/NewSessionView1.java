@@ -13,6 +13,7 @@ import java.awt.image.FilteredImageSource;
 import java.awt.image.ImageFilter;
 import java.awt.image.ImageProducer;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -23,9 +24,11 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 
 /**
  * View class.
@@ -52,6 +55,11 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
      * List of panels which are rows for the videos
      */
     private static LinkedList<JPanel> videoPanels;
+
+    //Has the progress bar been created yet?
+    private static Boolean progressBarMade;
+    //Increments for the progress bar will be divided by this scaler
+    private static int progressBarScalar;
 
     /**
      * Buttons.
@@ -87,6 +95,12 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
     private JPanel currentVideoPanel;
 
     /**
+     * Progress bar for downloading
+     */
+    private final JProgressBar progressBar = new JProgressBar(
+            JProgressBar.HORIZONTAL);
+
+    /**
      * No-argument constructor.
      */
     public NewSessionView1() {
@@ -100,6 +114,8 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
 
         videoPanels = new LinkedList<JPanel>();
         this.count = COLUMNS_IN_VIDEO_PANEL;
+        progressBarMade = false;
+        progressBarScalar = 1000000;
 
         // Set up the GUI widgets --------------------------------------------
 
@@ -371,11 +387,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
     }
 
     @Override
-    public String getSelectedVideo() {
-        return null;
-    }
-
-    @Override
     public void closeWindow() {
         this.dispose();
     }
@@ -419,4 +430,166 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
     public void addListenerToComboBox() {
         this.classComboBox.addActionListener(this);
     }
+
+    /**
+     * Changes the GUI to have a progress bar
+     *
+     * @param <T>
+     * @param <V>
+     */
+    private class ProgressbarWorker<T, V> extends javax.swing.SwingWorker {
+        private NewSessionView view;
+        private long max;
+
+        ProgressbarWorker(NewSessionView view, long max) {
+            this.view = view;
+            this.max = max;
+        }
+
+        @Override
+        protected Object doInBackground() throws Exception {
+            System.out.println("ProgressbarWorker doInBackground");
+            return null;
+        }
+
+        @Override
+        protected void process(List chunks) {
+            System.out.println("Process for Progressbar Worker");
+        }
+
+        @Override
+        protected void done() {
+            System.out.println("Progressbar Worker done");
+            //update the progress bar
+            this.view.progress(this.max);
+            NewSessionView1.this.videoScrollPane.getViewport().removeAll();
+            NewSessionView1.this.progressBar
+                    .setMaximum((int) (this.max / progressBarScalar));
+            NewSessionView1.this.progressBar.setValue(
+                    NewSessionView1.this.progressBar.getMaximum() / 2);
+            NewSessionView1.this.progressBar.setForeground(Color.GREEN);
+            NewSessionView1.this.videoScrollPane.getViewport()
+                    .add(NewSessionView1.this.progressBar);
+            progressBarMade = true;
+            NewSessionView1.this.revalidate();
+            NewSessionView1.this.repaint();
+
+        }
+
+    }
+
+    /**
+     * Updates the progress bar in the GUI
+     *
+     * @param <T>
+     * @param <V>
+     */
+    private class ProgressbarUpdater<T, V> extends javax.swing.SwingWorker {
+        private NewSessionView view;
+        private long increment;
+
+        public void ProgressbarWorker(NewSessionView view, long increment) {
+            this.view = view;
+            this.increment = increment;
+        }
+
+        @Override
+        protected Object doInBackground() throws Exception {
+            System.out.println("ProgressbarWorker doInBackground");
+            //update the progress bar
+            this.view.progress(this.increment);
+            return null;
+        }
+
+    }
+
+    @Override
+    public void progress(long max) {
+        System.out.println("THERE");
+        this.videoScrollPane.getViewport().removeAll();
+        this.progressBar.setMaximum((int) (max / progressBarScalar));
+        this.progressBar.setValue(this.progressBar.getMaximum() / 2);
+        this.progressBar.setForeground(Color.GREEN);
+        this.videoScrollPane.getViewport().add(this.progressBar);
+        progressBarMade = true;
+        this.revalidate();
+        this.repaint();
+        System.out.println("EVERYHERE");
+
+    }
+
+    /**
+     * Changes the GUI to a progress bar
+     */
+    @Override
+    public void changeToProgressBar(long max) {
+        System.out.println("Change to progress bar");
+        //ProgressbarWorker<String, Void> myWorker = new ProgressbarWorker<String, Void>(
+        //        this, max);
+        //myWorker.execute();
+        this.progress(max);
+    }
+
+    /**
+     * Sets the progress bar to the given progress if the GUI has been set to
+     * show a progress bar
+     */
+    @Override
+    public void setProgress(long progress) {
+        System.out.println("Change bar to :" + progress);
+        //make sure the progress bar exists
+        if (progressBarMade) {
+            //change the progress in the progress bar to the given value
+            this.progressBar.setValue((int) (progress / progressBarScalar));
+            this.repaint();
+            System.out.println("progressbar updated");
+        }
+    }
+
+    @Override
+    public com.box.sdk.ProgressListener getProgressListener() {
+        return new ProgressListener(this);
+    }
+
+    private final class ProgressListener
+            implements com.box.sdk.ProgressListener {
+
+        private NewSessionView view;
+        private int count;
+
+        //Constructor
+        ProgressListener(NewSessionView view) {
+            this.view = view;
+            this.count = 0;
+        }
+
+        @Override
+        public void onProgressChanged(long numBytes, long totalBytes) {
+            double percentComplete = numBytes / totalBytes * 100;
+
+            this.count++;
+            if (this.count > 100) {
+                this.count = 0;
+                System.out.println("Current Bytes: " + numBytes);
+                //System.out.println("Total Bytes: " + totalBytes);
+                //System.out.println("Downloaded " + percentComplete + "%");
+                class myTask implements Runnable {
+                    private NewSessionView view;
+
+                    public myTask(NewSessionView view) {
+                        this.view = view;
+                    }
+
+                    @Override
+                    public void run() {
+                        this.view.setProgress(numBytes);
+
+                    }
+
+                }
+                SwingUtilities.invokeLater(new myTask(this.view));
+            }
+        }
+    }
+
 }

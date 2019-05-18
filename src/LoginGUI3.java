@@ -82,7 +82,7 @@ public class LoginGUI3 extends Application {
                     }
                 });
 
-        // Load the Google web page
+        // Load login page
         String homePageUrl = Config.box_redirect
                 + "?response_type=code&client_id=" + Config.client_id
                 + "&redirect_uri=" + Config.redirect_uri + "&state="

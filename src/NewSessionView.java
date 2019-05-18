@@ -23,8 +23,6 @@ public interface NewSessionView extends ActionListener {
 
     public String getSelectedClass();
 
-    public String getSelectedVideo();
-
     public void addDropdownItem(String text);
 
     public void closeWindow();
@@ -41,4 +39,12 @@ public interface NewSessionView extends ActionListener {
     public void enableButton();
 
     public void addListenerToComboBox();
+
+    public void changeToProgressBar(long increment);
+
+    public void setProgress(long progress);
+
+    public void progress(long progress);
+
+    public com.box.sdk.ProgressListener getProgressListener();
 }

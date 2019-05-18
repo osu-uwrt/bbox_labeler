@@ -1,18 +1,24 @@
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import com.box.sdk.BoxAPIConnection;
 import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxItem;
 import com.box.sdk.BoxItem.Info;
+import com.box.sdk.ProgressListener;
 
 /**
  * Controller class.
@@ -118,35 +124,141 @@ public final class NewSessionController1 implements NewSessionController {
             Info info = it.next();
             if (info instanceof BoxFile.Info) {
                 BoxFile file = new BoxFile(api, info.getID());
-                //get the thumbnail
-                byte[] thumbnail = file.getThumbnail(
-                        BoxFile.ThumbnailFileType.PNG, this.thumbnailSize,
-                        this.thumbnailSize, this.thumbnailSize,
-                        this.thumbnailSize);
-                if (this.DEBUG) {
-                    System.out.println("Thumbnail found");
-                    System.out.println(thumbnail.toString());
-                }
-                //get the name of the file
-                String name = info.getName();
-                //add the video
-                try {
-                    for (int i = 1; i <= 10; i++) {
-                        InputStream bais = new ByteArrayInputStream(thumbnail);
-                        java.awt.Color c = this.model.getColorNeutral();
-                        this.view.addVideo(ImageIO.read(bais), name, true, c);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                this.addVideoToView(file);
             }
         }
+    }
+
+    /**
+     * Adds the given video to the view.
+     *
+     * @param file
+     */
+    private void addVideoToView(BoxFile file) {
+        //get the thumbnail
+        byte[] thumbnail = file.getThumbnail(BoxFile.ThumbnailFileType.PNG,
+                this.thumbnailSize, this.thumbnailSize, this.thumbnailSize,
+                this.thumbnailSize);
+        if (this.DEBUG) {
+            System.out.println("Thumbnail found");
+            System.out.println(thumbnail.toString());
+        }
+        //get the name of the file
+        String name = file.getInfo().getName();
+        //add the video
+        try {
+            for (int i = 1; i <= 10; i++) {
+                InputStream bais = new ByteArrayInputStream(thumbnail);
+                java.awt.Color c = this.model.getColorNeutral();
+                this.view.addVideo(ImageIO.read(bais), name, true, c);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Checks if the file has already been done.
+     *
+     * @param file
+     * @return false if the video has not been done and true otherwise
+     */
+    private Boolean hasVideoBeenDone(BoxFile file) {
+        //TODO: fill in method
+        return false;
     }
 
     @Override
     public void processBeginLabellingEvent() {
         //Open the BBox GUI and give it the API, class, and video name
+        if (this.DEBUG) {
+            System.out.println("Processing BeginLabellingEvent");
+        }
+        /**
+         * download the video
+         */
+        //get the directory the program was launched in
+        String videoDirectory = this.buildLocalUrl();
 
+        File videoFile = new File(
+                videoDirectory + this.model.getNameOfSelectedVideo());
+        //build the path to the file
+        videoFile.getParentFile().mkdirs();
+        //create the file
+        this.createFile(videoFile);
+
+        BoxAPIConnection api = this.model.api();
+        BoxFolder boxVideoFolder = BoxFolder.getRootFolder(api);
+        boxVideoFolder = this.getSubFolder(boxVideoFolder,
+                this.model.pathToYOLO());
+        boxVideoFolder = this.getSubFolder(boxVideoFolder,
+                this.model.pathToVideos());
+        String selectedClass = this.view.getSelectedClass();
+        String[] classPath = { selectedClass };
+        boxVideoFolder = this.getSubFolder(boxVideoFolder, classPath);
+
+        this.DownloadFile(api, boxVideoFolder,
+                this.model.getNameOfSelectedVideo(), videoDirectory);
+
+        this.loadNextWindow();
+    }
+
+    /**
+     * Loads the next window and closes this one.
+     */
+    private void loadNextWindow() {
+        /*
+         * Create instances of the model, view, and controller objects, and
+         * initialize them; view needs to know about controller, and controller
+         * needs to know about model and view
+         */
+        YOLOBboxModel model = new YOLOBboxModel1(this.model.api(),
+                this.view.getSelectedClass(),
+                this.model.getNameOfSelectedVideo());
+        YOLOBboxView view = new YOLOBboxView1();
+        YOLOBboxController controller = new YOLOBboxController1(model, view);
+        view.registerObserver(controller);
+        //TODO Close this window
+    }
+
+    /**
+     * Creates folders on the local machine that are not yet created and then
+     * creates the file if needed.
+     *
+     * @param videoFileUrl
+     */
+    private void createFile(File videoFile) {
+        if (!videoFile.exists()) {
+            try {
+                videoFile.createNewFile();
+            } catch (IOException e) {
+                System.err.println("Error creating local file");
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Builds a string for the absolute path to where the file will be
+     * downloaded to.
+     *
+     * @return the string that was built
+     */
+    private String buildLocalUrl() {
+        String videoFileUrl = "";
+        try {
+            videoFileUrl = YOLOBboxController1.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI().getPath().toString();
+            //get rid of the executable at the end
+            videoFileUrl = videoFileUrl.substring(0,
+                    videoFileUrl.lastIndexOf("/") + 1);
+            //add the name of the folder to put the file in
+            videoFileUrl += Config.local_video_folder_name + "/";
+        } catch (URISyntaxException e) {
+            System.err.println("Error getting the location of the program");
+            e.printStackTrace();
+        }
+        return videoFileUrl;
     }
 
     /**
@@ -224,6 +336,120 @@ public final class NewSessionController1 implements NewSessionController {
             System.out.println(folder.toString());
         }
         return folder;
+    }
+
+    /**
+     * Downloads the file with the name {fileName} in the first level of
+     * {folder} and puts it in the location on the local machine given by {url}.
+     * The {api} is needed to have access to box.
+     *
+     * @param api
+     * @param folder
+     * @param fileName
+     * @param url
+     *            Can be relative or absolute but should end with "/"
+     */
+    private void DownloadFile(BoxAPIConnection api, BoxFolder folder,
+            String fileName, String url) {
+        System.out.println("Attempting to download: " + fileName);
+        Iterator<Info> it = folder.getChildren().iterator();
+        while (it.hasNext()) {
+            Info info = it.next();
+            System.out.println("Found file: " + info.getName());
+            //if its a file and has the name of the selected video
+            if (info instanceof BoxFile.Info
+                    && info.getName().equals(fileName)) {
+                BoxFile file = new BoxFile(api, info.getID());
+                //download the file and put it in the output stream
+
+                FileOutputStream os;
+                try {
+                    os = new FileOutputStream(url + file.getInfo().getName());
+
+                    //change the gui to show a progress bar
+                    System.out
+                            .println("File Size: " + file.getInfo().getSize());
+                    this.view.changeToProgressBar(file.getInfo().getSize());
+                    System.out.println("Downloading File");
+                    class myTask implements Runnable {
+                        FileOutputStream os;
+                        ProgressListener pl;
+
+                        public myTask(FileOutputStream os,
+                                ProgressListener pl) {
+                            this.os = os;
+                            this.pl = pl;
+                        }
+
+                        @Override
+                        public void run() {
+                            file.download(this.os, this.pl);
+                        }
+
+                    }
+
+                    class ProgressListener
+                            implements com.box.sdk.ProgressListener {
+
+                        private NewSessionView view;
+                        private int count;
+
+                        //Constructor
+                        ProgressListener(NewSessionView view) {
+                            this.view = view;
+                            this.count = 0;
+                        }
+
+                        @Override
+                        public void onProgressChanged(long numBytes,
+                                long totalBytes) {
+                            double percentComplete = numBytes / totalBytes
+                                    * 100;
+
+                            this.count++;
+                            if (this.count > 100) {
+                                this.count = 0;
+                                System.out
+                                        .println("Current Bytes: " + numBytes);
+                                //System.out.println("Total Bytes: " + totalBytes);
+                                //System.out.println("Downloaded " + percentComplete + "%");
+                                class myTask implements Runnable {
+                                    private NewSessionView view;
+
+                                    public myTask(NewSessionView view) {
+                                        this.view = view;
+                                    }
+
+                                    @Override
+                                    public void run() {
+                                        this.view.setProgress(numBytes);
+
+                                    }
+
+                                }
+                                SwingUtilities
+                                        .invokeLater(new myTask(this.view));
+                            }
+                        }
+                    }
+
+                    try {
+                        SwingUtilities.invokeAndWait(new myTask(os,
+                                new ProgressListener(this.view)));
+                    } catch (InvocationTargetException
+                            | InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    System.out.println("Download Complete");
+                    os.close();
+                } catch (IOException e) {
+                    System.err.println(
+                            "Error occured trying to download: " + fileName);
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     /**

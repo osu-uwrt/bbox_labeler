@@ -1,3 +1,5 @@
+import com.box.sdk.BoxAPIConnection;
+
 /**
  * Controller class.
  *
@@ -34,17 +36,33 @@ public final class SessionTypeController1 implements SessionTypeController {
     @Override
     public void processNewEvent() {
         System.out.println("Begin New Session Button Pressed");
-        //Open the next GUI and close this one
-        /*
-         * Create instances of the model, view, and controller objects, and
-         * initialize them; view needs to know about controller, and controller
-         * needs to know about model and view
-         */
-        NewSessionModel model = new NewSessionModel1(this.model.api());
-        NewSessionView view = new NewSessionView1();
-        NewSessionController controller = new NewSessionController1(model,
-                view);
-        view.registerObserver(controller);
+
+        class myTask implements Runnable {
+            BoxAPIConnection api;
+
+            myTask(BoxAPIConnection api) {
+                this.api = api;
+            }
+
+            @Override
+            public void run() {
+                //Open the next GUI and close this one
+                /*
+                 * Create instances of the model, view, and controller objects,
+                 * and initialize them; view needs to know about controller, and
+                 * controller needs to know about model and view
+                 */
+                NewSessionModel model = new NewSessionModel1(this.api);
+                NewSessionView view = new NewSessionView1();
+                NewSessionController controller = new NewSessionController1(
+                        model, view);
+                view.registerObserver(controller);
+                //TODO Close this window
+            }
+
+        }
+        Thread t = new Thread(new myTask(this.model.api()));
+        t.start();
     }
 
     @Override

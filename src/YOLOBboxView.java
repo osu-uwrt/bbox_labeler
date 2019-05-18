@@ -82,8 +82,4 @@ public interface YOLOBboxView extends ActionListener {
     public void update();
 
     public void toggleButtons();
-
-    public void updateUsernameTextDisplay(String s);
-
-    public void updatePasswordTextDisplay(String s);
 }

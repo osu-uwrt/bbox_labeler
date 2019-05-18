@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 
+import com.box.sdk.BoxAPIConnection;
+
 /**
  * Model interface.
  *
@@ -15,14 +17,6 @@ public interface YOLOBboxModel {
     String videoLocation();
 
     void setVideoLocation(String vl);
-
-    String username();
-
-    void setUsername(String un);
-
-    String password();
-
-    void setPassword(String pw);
 
     int itemIndex();
 
@@ -79,5 +73,17 @@ public interface YOLOBboxModel {
     double lastKnownY();
 
     void setLastKnownY(double y);
+
+    BoxAPIConnection api();
+
+    void setApi(BoxAPIConnection api);
+
+    String className();
+
+    void setClassName(String className);
+
+    String videoName();
+
+    void setVideoName(String videoName);
 
 }

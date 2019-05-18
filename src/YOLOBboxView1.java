@@ -17,9 +17,7 @@ import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
 import javax.swing.text.NumberFormatter;
 
 /**
@@ -40,38 +38,33 @@ public final class YOLOBboxView1 extends JFrame
      * GUI widgets that need to be in scope in actionPerformed method, and
      * related constants.
      */
-    private static final int ROWS_IN_BUTTON_PANEL_GRID = 12,
-            COLUMNS_IN_BUTTON_PANEL_GRID = 1, ROWS_IN_THIS_GRID = 1,
-            COLUMNS_IN_THIS_GRID = 2, COLUMNS_IN_FRAME_CONTROL_PANEL_GRID = 3,
+    private static final int COLUMNS_IN_FRAME_CONTROL_PANEL_GRID = 5,
             ROWS_IN_FRAME_CONTROL_PANEL_GRID = 2,
             DEFAULT_WIDTH_OF_WINDOW = 1000, DEFAULT_HEIGHT_OF_WINDOW = 700,
-            DEFUALT_BUTTON_PANEL_WIDTH = 200, DEFAULT_BUTTON_PANEL_HEIGHT = 200;
+            BUTTON_PANEL_HEIGHT = 130;
 
     /**
      * JPanels
      */
-    private final JPanel videoContainer, frameControlPanel, buttonPanel;
-    private final JSplitPane splitMain, splitVideo;
+    private final JPanel videoContainer, frameControlPanel;
+    private final JSplitPane splitMain;
 
     /**
      * Text areas.
      */
-    private final JTextArea videoLocationText, usernameText;
-    private final JFormattedTextField itemIndexText, frameJumpText;
-    private final JPasswordField passwordText;
+    private final JFormattedTextField frameJumpText;
 
     /**
      * Buttons.
      */
-    private final JButton browseVideoLocationButton, reviewButton,
-            fillInFramesButton, resetButton, framesBackButton,
-            framesForwardButton, exportButton;
+    private final JButton reviewButton, fillInFramesButton, resetButton,
+            framesBackButton, framesForwardButton, exportButton;
 
     /**
      * Labels
      */
-    private final JLabel framesLabel, frameNumberLabel, imageLabel,
-            itemIndexLabel, usernameLabel, passwordLabel;
+    private final JLabel frameNumberLabel, imageLabel, frameRateLabel,
+            totalFramesLabel;
 
     /**
      * No-argument constructor.
@@ -90,51 +83,29 @@ public final class YOLOBboxView1 extends JFrame
         /*
          * Create widgets
          */
-        this.videoLocationText = new JTextArea("");
-        this.usernameText = new JTextArea("");
         NumberFormat format = NumberFormat.getInstance();
         NumberFormatter formatter = new NumberFormatter(format);
         formatter.setValueClass(Integer.class);
         formatter.setMinimum(0);
         formatter.setMaximum(Integer.MAX_VALUE);
         formatter.setAllowsInvalid(false);
-        this.itemIndexText = new JFormattedTextField(formatter);
         this.frameJumpText = new JFormattedTextField(formatter);
         this.frameJumpText.setText("1");
-        this.passwordText = new JPasswordField();
-        this.browseVideoLocationButton = new JButton("Browse for video");
         this.reviewButton = new JButton("Review");
         this.resetButton = new JButton("Reset");
-        this.fillInFramesButton = new JButton("Fill in frames");
+        this.fillInFramesButton = new JButton("<html>Fill in frames</html>");
         this.exportButton = new JButton("Export");
         this.framesBackButton = new JButton("Back");
         this.framesForwardButton = new JButton("Forward");
-        this.framesLabel = new JLabel("Number of frames:");
+        this.totalFramesLabel = new JLabel("Number of frames:");
         this.frameNumberLabel = new JLabel("Current frame:");
         this.imageLabel = new JLabel();
-        this.itemIndexLabel = new JLabel("Item Index:");
-        this.usernameLabel = new JLabel("Username:");
-        this.passwordLabel = new JLabel("Password:");
+        this.frameRateLabel = new JLabel();
 
         /*
          * Text areas
          */
-        this.videoLocationText.setEditable(true);
-        this.videoLocationText.setLineWrap(true);
-        this.videoLocationText.setAutoscrolls(true);
-        this.usernameText.setEditable(true);
-        this.usernameText.setLineWrap(true);
-        this.usernameText.setAutoscrolls(true);
-        this.itemIndexText.setEditable(true);
-        this.passwordText.setEditable(true);
-        this.passwordText.setAutoscrolls(true);
         this.frameJumpText.setEditable(true);
-
-        /*
-         * Create a button panel organized using grid layout
-         */
-        this.buttonPanel = new JPanel(new GridLayout(ROWS_IN_BUTTON_PANEL_GRID,
-                COLUMNS_IN_BUTTON_PANEL_GRID));
 
         /*
          * Create a button panel organized using grid layout
@@ -147,64 +118,47 @@ public final class YOLOBboxView1 extends JFrame
          * Create a panel organized using grid layout for the video
          */
         this.videoContainer = new JPanel(new FlowLayout());
-        /*
-         * Add the buttons to the button panel, from left to right and top to
-         * bottom
-         */
-        this.buttonPanel.add(this.browseVideoLocationButton);
-        this.buttonPanel.add(this.videoLocationText);
-        this.buttonPanel.add(this.itemIndexLabel);
-        this.buttonPanel.add(this.itemIndexText);
-        this.buttonPanel.add(this.usernameLabel);
-        this.buttonPanel.add(this.usernameText);
-        this.buttonPanel.add(this.passwordLabel);
-        this.buttonPanel.add(this.passwordText);
-        this.buttonPanel.add(this.fillInFramesButton);
-        this.buttonPanel.add(this.reviewButton);
-        this.buttonPanel.add(this.exportButton);
-        this.buttonPanel.add(this.resetButton);
-        this.buttonPanel.setPreferredSize(
-                new Dimension(DEFUALT_BUTTON_PANEL_WIDTH, 800));
+
         /*
          * Add the buttons to the frame control panel, from left to right and
          * top to bottom
          */
-        this.frameControlPanel.add(new JLabel());
-        this.frameControlPanel.add(this.framesLabel);
-        this.frameControlPanel.add(new JLabel());
+        //First row
+        this.frameControlPanel.add(this.resetButton);
+        this.frameControlPanel.add(this.fillInFramesButton);
+        this.frameControlPanel.add(this.frameRateLabel);
+        this.frameControlPanel.add(this.frameNumberLabel);
+        this.frameControlPanel.add(this.totalFramesLabel);
+        //Second row
+        this.frameControlPanel.add(this.reviewButton);
+        this.frameControlPanel.add(this.exportButton);
         this.frameControlPanel.add(this.framesBackButton);
         this.frameControlPanel.add(this.frameJumpText);
         this.frameControlPanel.add(this.framesForwardButton);
+        this.frameControlPanel.setMinimumSize(new Dimension(0, 100));
 
         /*
          * Add the video label and frameControlPanel to the video panel
          */
         this.videoContainer.add(this.imageLabel);
-        this.splitVideo = new JSplitPane();
-        this.frameControlPanel.setMinimumSize(new Dimension(100, 150));
-        this.frameControlPanel.setMaximumSize(new Dimension(100, 100));
-        this.frameControlPanel.setPreferredSize(new Dimension(100, 200));
-        this.splitVideo.setOrientation(JSplitPane.VERTICAL_SPLIT);
-        this.splitVideo.setTopComponent(this.videoContainer);
-        this.splitVideo.setBottomComponent(this.frameControlPanel);
-        this.splitVideo.setDividerSize(0);
-        this.splitVideo.setDividerLocation(
-                DEFAULT_HEIGHT_OF_WINDOW - DEFAULT_BUTTON_PANEL_HEIGHT);
-        this.splitVideo.setEnabled(false);
+        this.splitMain = new JSplitPane();
+        this.splitMain.setOrientation(JSplitPane.VERTICAL_SPLIT);
+        this.splitMain.setTopComponent(this.videoContainer);
+        this.splitMain.setBottomComponent(this.frameControlPanel);
+        this.splitMain.setDividerSize(5);
+        System.out.println(DEFAULT_HEIGHT_OF_WINDOW - BUTTON_PANEL_HEIGHT);
+        this.splitMain.setDividerLocation(
+                DEFAULT_HEIGHT_OF_WINDOW - BUTTON_PANEL_HEIGHT);
+        this.splitMain.setEnabled(false);
         this.imageLabel.setOpaque(false);
         /*
          * Organize main window using grid layout
          */
-        this.setLayout(new GridLayout(ROWS_IN_THIS_GRID, COLUMNS_IN_THIS_GRID));
+        this.setLayout(new GridLayout(1, 1));
         /*
          * Add scroll panes and button panel to main window, from left to right
          * and top to bottom
          */
-        this.splitMain = new JSplitPane();
-        this.splitMain.setLeftComponent(this.buttonPanel);
-        this.splitMain.setRightComponent(this.splitVideo);
-        this.splitMain.setDividerSize(0);
-        this.splitMain.setEnabled(false);
         this.add(this.splitMain);
         this.setMinimumSize(new Dimension(500, 400));
 
@@ -214,7 +168,6 @@ public final class YOLOBboxView1 extends JFrame
          * Register this object as the observer for all GUI events
          */
         this.resetButton.addActionListener(this);
-        this.browseVideoLocationButton.addActionListener(this);
         this.fillInFramesButton.addActionListener(this);
         this.exportButton.addActionListener(this);
         this.reviewButton.addActionListener(this);
@@ -260,28 +213,6 @@ public final class YOLOBboxView1 extends JFrame
     }
 
     /**
-     * Updates video location display based on String provided as argument.
-     *
-     * @param s
-     *            new value of video location display
-     */
-    @Override
-    public void updateVideoLocationTextDisplay(String s) {
-        this.videoLocationText.setText(s);
-    }
-
-    /**
-     * Updates item display based on integer provided as argument.
-     *
-     * @param i
-     *            b new value of item index display
-     */
-    @Override
-    public void updateItemIndexTextDisplay(int i) {
-        this.itemIndexText.setText(String.valueOf(i));
-    }
-
-    /**
      * Updates total frames display based on integer provided as argument.
      *
      * @param i
@@ -289,7 +220,7 @@ public final class YOLOBboxView1 extends JFrame
      */
     @Override
     public void updateTotalFramesTextDisplay(int i) {
-        //display does not currently show total frames
+        this.totalFramesLabel.setText("<html>Total Frames: " + i + "</html>");
     }
 
     /**
@@ -300,7 +231,7 @@ public final class YOLOBboxView1 extends JFrame
      */
     @Override
     public void updateCurrentFrameTextDisplay(int i) {
-        this.frameNumberLabel.setText(String.valueOf(i));
+        this.frameNumberLabel.setText("<html>Current Frame: " + i + "</html>");
     }
 
     /**
@@ -311,7 +242,7 @@ public final class YOLOBboxView1 extends JFrame
      */
     @Override
     public void updateFrameRateTextDisplay(int i) {
-        //TODO: show frame rate
+        this.frameRateLabel.setText("<html>Frame Rate: " + i + "</html>");
     }
 
     /**
@@ -323,16 +254,6 @@ public final class YOLOBboxView1 extends JFrame
     @Override
     public void updateFrameJumpTextDisplay(int i) {
         this.frameJumpText.setText(String.valueOf(i));
-    }
-
-    @Override
-    public void updateUsernameTextDisplay(String s) {
-        this.usernameText.setText(s);
-    }
-
-    @Override
-    public void updatePasswordTextDisplay(String s) {
-        this.passwordText.setText(s);
     }
 
     @Override
@@ -354,8 +275,6 @@ public final class YOLOBboxView1 extends JFrame
     @Override
     public void toggleButtons() {
         this.resetButton.setEnabled(!this.resetButton.isEnabled());
-        this.browseVideoLocationButton
-                .setEnabled(!this.browseVideoLocationButton.isEnabled());
         this.exportButton.setEnabled(!this.exportButton.isEnabled());
         this.reviewButton.setEnabled(!this.reviewButton.isEnabled());
         this.fillInFramesButton
@@ -387,10 +306,6 @@ public final class YOLOBboxView1 extends JFrame
         if (source == this.resetButton) {
             this.toggleButtons();
             this.controller.processResetEvent();
-            this.toggleButtons();
-        } else if (source == this.browseVideoLocationButton) {
-            this.toggleButtons();
-            this.controller.processBrowseVideoLocationEvent();
             this.toggleButtons();
         } else if (source == this.exportButton) {
             this.toggleButtons();
@@ -492,6 +407,12 @@ public final class YOLOBboxView1 extends JFrame
         //System.out.println("Y-coord: " + arg0.getY());
         this.controller.processMouseMovedEvent(arg0.getX(), arg0.getY());
 
+    }
+
+    @Override
+    public void updateButtonAreaSize() {
+        this.splitMain
+                .setDividerLocation(this.getHeight() - BUTTON_PANEL_HEIGHT);
     }
 
 }

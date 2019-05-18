@@ -1,5 +1,6 @@
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -11,10 +12,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -62,10 +65,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Get model info
          */
-        String videoLocation = model.videoLocation();
-        String username = model.username();
-        String password = model.password();
-        int itemIndex = model.itemIndex();
         int currentFrame = model.currentFrame();
         int frameRate = model.frameRate();
         int frameJump = model.frameJump();
@@ -75,10 +74,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect changes in model
          */
-        view.updateVideoLocationTextDisplay(videoLocation);
-        view.updateUsernameTextDisplay(username);
-        view.updatePasswordTextDisplay(password);
-        view.updateItemIndexTextDisplay(itemIndex);
         view.updateCurrentFrameTextDisplay(currentFrame);
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
@@ -107,6 +102,55 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect initial value of model
          */
         this.updateViewToMatchModel(this.model, this.view);
+
+        try {
+            JOptionPane.showMessageDialog(null,
+                    "Program run from: " + YOLOBboxController1.class
+                            .getProtectionDomain().getCodeSource().getLocation()
+                            .toURI().getPath().toString());
+        } catch (HeadlessException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        //load the video
+        this.loadVideo();
+    }
+
+    private void loadVideo() {
+        File file = this.model.file();
+
+        //try to load the file and load the first frame
+        try {
+            FFmpegFrameGrabber frameGrabber = new FFmpegFrameGrabber(
+                    String.valueOf(file));
+            this.model.setFrameGrabber(frameGrabber);
+            frameGrabber.start();
+            //make sure the file is a video file and has frames
+            if (frameGrabber.hasVideo()
+                    && frameGrabber.getLengthInFrames() > 0) {
+                frameGrabber.setAudioChannels(0);
+                Java2DFrameConverter j = new Java2DFrameConverter();
+                frameGrabber.setFrameNumber(0);
+                Image bi = j.convert(frameGrabber.grabImage());
+                this.model.setMaster(bi);
+                BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
+                this.model.setScaled(scaled);
+                this.model.setFrameRate((int) frameGrabber.getFrameRate());
+                this.model
+                        .setTotalFrames(frameGrabber.getLengthInVideoFrames());
+
+            }
+            frameGrabber.stop();
+
+            this.model.setCurrentFrame(frameGrabber.getFrameNumber());
+
+        } catch (IOException e) {
+            System.out.println("Trouble Loading File");
+        }
     }
 
     /**
@@ -118,8 +162,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
         this.model.setVideoLocation("");
-        this.model.setUsername("");
-        this.model.setPassword("");
         this.model.setItemIndex(0);
         /*
          * Update view to reflect changes in model
@@ -371,6 +413,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.redrawLines(lines,
                 this.model.bbox().get(this.model.currentFrame()));
         this.model.setLines(lines);
+        this.view.updateButtonAreaSize();
         /*
          * Update view to reflect changes in model
          */

@@ -18,22 +18,6 @@ public interface YOLOBboxView extends ActionListener {
     void registerObserver(YOLOBboxController controller);
 
     /**
-     * Updates video location display based on String provided as argument.
-     *
-     * @param s
-     *            new value of video location display
-     */
-    void updateVideoLocationTextDisplay(String s);
-
-    /**
-     * Updates item index display based on integer provided as argument.
-     *
-     * @param i
-     *            new value of input display
-     */
-    void updateItemIndexTextDisplay(int i);
-
-    /**
      * Updates number of frames display based on integer provided as argument.
      *
      * @param i
@@ -82,4 +66,6 @@ public interface YOLOBboxView extends ActionListener {
     public void update();
 
     public void toggleButtons();
+
+    public void updateButtonAreaSize();
 }

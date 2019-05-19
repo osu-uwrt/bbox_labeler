@@ -78,7 +78,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     }
 
     public YOLOBboxModel1(BoxAPIConnection api, String className,
-            String videoName) {
+            String videoName, File file) {
         /*
          * Initialize model
          */
@@ -94,7 +94,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.bbox.add(new BBox());
         this.totalFrames = 0;//the total number of frames in the video
         this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
-        this.file = new File("");//the video file
+        this.file = file;//the video file
         //used to grab individual frames from the video
         this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
         try {

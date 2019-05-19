@@ -200,13 +200,13 @@ public final class NewSessionController1 implements NewSessionController {
         this.DownloadFile(api, boxVideoFolder,
                 this.model.getNameOfSelectedVideo(), videoDirectory);
 
-        this.loadNextWindow();
+        this.loadNextWindow(videoFile);
     }
 
     /**
      * Loads the next window and closes this one.
      */
-    private void loadNextWindow() {
+    private void loadNextWindow(File file) {
         /*
          * Create instances of the model, view, and controller objects, and
          * initialize them; view needs to know about controller, and controller
@@ -214,7 +214,7 @@ public final class NewSessionController1 implements NewSessionController {
          */
         YOLOBboxModel model = new YOLOBboxModel1(this.model.api(),
                 this.view.getSelectedClass(),
-                this.model.getNameOfSelectedVideo());
+                this.model.getNameOfSelectedVideo(), file);
         YOLOBboxView view = new YOLOBboxView1();
         YOLOBboxController controller = new YOLOBboxController1(model, view);
         view.registerObserver(controller);
@@ -371,11 +371,11 @@ public final class NewSessionController1 implements NewSessionController {
                             .println("File Size: " + file.getInfo().getSize());
                     this.view.changeToProgressBar(file.getInfo().getSize());
                     System.out.println("Downloading File");
-                    class myTask implements Runnable {
+                    class DownloadTask implements Runnable {
                         FileOutputStream os;
                         ProgressListener pl;
 
-                        public myTask(FileOutputStream os,
+                        public DownloadTask(FileOutputStream os,
                                 ProgressListener pl) {
                             this.os = os;
                             this.pl = pl;
@@ -413,29 +413,36 @@ public final class NewSessionController1 implements NewSessionController {
                                         .println("Current Bytes: " + numBytes);
                                 //System.out.println("Total Bytes: " + totalBytes);
                                 //System.out.println("Downloaded " + percentComplete + "%");
-                                class myTask implements Runnable {
+                                class SetProgressTask implements Runnable {
                                     private NewSessionView view;
 
-                                    public myTask(NewSessionView view) {
+                                    public SetProgressTask(
+                                            NewSessionView view) {
                                         this.view = view;
                                     }
 
                                     @Override
                                     public void run() {
+                                        System.out
+                                                .println("Try to set progress");
                                         this.view.setProgress(numBytes);
 
                                     }
 
                                 }
-                                SwingUtilities
-                                        .invokeLater(new myTask(this.view));
+                                SwingUtilities.invokeLater(
+                                        new SetProgressTask(this.view));
                             }
                         }
                     }
 
                     try {
-                        SwingUtilities.invokeAndWait(new myTask(os,
-                                new ProgressListener(this.view)));
+                        if (SwingUtilities.isEventDispatchThread()) {
+                            file.download(os, new ProgressListener(this.view));
+                        } else {
+                            SwingUtilities.invokeAndWait(new DownloadTask(os,
+                                    new ProgressListener(this.view)));
+                        }
                     } catch (InvocationTargetException
                             | InterruptedException e) {
                         // TODO Auto-generated catch block

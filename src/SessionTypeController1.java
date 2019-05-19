@@ -1,3 +1,5 @@
+import javax.swing.SwingUtilities;
+
 import com.box.sdk.BoxAPIConnection;
 
 /**
@@ -61,8 +63,7 @@ public final class SessionTypeController1 implements SessionTypeController {
             }
 
         }
-        Thread t = new Thread(new myTask(this.model.api()));
-        t.start();
+        SwingUtilities.invokeLater(new myTask(this.model.api()));
     }
 
     @Override

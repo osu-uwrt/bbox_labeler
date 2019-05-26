@@ -231,7 +231,8 @@ public final class YOLOBboxView1 extends JFrame
      */
     @Override
     public void updateCurrentFrameTextDisplay(int i) {
-        this.frameNumberLabel.setText("<html>Current Frame: " + i + "</html>");
+        this.frameNumberLabel
+                .setText("<html>Current Frame: " + (i + 1) + "</html>");
     }
 
     /**

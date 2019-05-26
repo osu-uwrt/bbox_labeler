@@ -6,4 +6,8 @@ public class Config {
     public static String local_video_folder_name = "Videos";
     public static String local_export_folder_name = "Exports";
     public static String local_save_folder_name = "Saves";
+    public static String[] path_to_yolo = { "The Underwater Robotics Team",
+            "Software", "YOLO" };
+    public static String[] path_to_data = { "Training Data" };
+    public static String[] path_to_videos = { "Raw" };
 }

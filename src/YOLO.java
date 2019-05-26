@@ -1,49 +1,51 @@
 /**
  * Class for a YOLO file just holds 4 ints
  *
- * @x: the x pixel of the center of the bbox
- * @y: the y pixel of the center of the bbox
- * @width: the width of the bbox
- * @height: the height of the bbox
+ * @x: a decimal between 0 and 1 for how far the center of the BBox is from the
+ *     left side of the frame
+ * @y: a decimal between 0 and 1 for how far the center of the BBox is from the
+ *     top of the frame
+ * @width: a decimal between 0 and 1 for the width of the bbox
+ * @height: a decimal between 0 and 1 for the height of the bbox
  *
  * @author Derek Opdycke
  *
  */
 public class YOLO {
-    private int x = 0;
-    private int y = 0;
-    private int width = 0;
-    private int height = 0;
+    private double x = 0;
+    private double y = 0;
+    private double width = 0;
+    private double height = 0;
 
-    public int x() {
+    public double x() {
         return this.x;
     }
 
-    public int y() {
+    public double y() {
         return this.y;
     }
 
-    public int width() {
+    public double width() {
         return this.width;
     }
 
-    public int height() {
+    public double height() {
         return this.height;
     }
 
-    public void setX(int x) {
+    public void setX(double x) {
         this.x = x;
     }
 
-    public void setY(int y) {
+    public void setY(double y) {
         this.y = y;
     }
 
-    public void setHeight(int h) {
+    public void setHeight(double h) {
         this.height = h;
     }
 
-    public void setWidth(int w) {
+    public void setWidth(double w) {
         this.width = w;
     }
 
@@ -54,10 +56,15 @@ public class YOLO {
 
     }
 
-    public YOLO(int x, int y, int width, int height) {
+    public YOLO(double x, double y, double width, double height) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+    }
+
+    @Override
+    public String toString() {
+        return this.x + " " + this.y + " " + this.width + " " + this.height;
     }
 }

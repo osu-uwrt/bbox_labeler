@@ -6,11 +6,29 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBufferByte;
 import java.awt.image.WritableRaster;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
-import javax.swing.JFileChooser;
+import javax.imageio.ImageIO;
+import javax.swing.Timer;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -18,6 +36,11 @@ import org.bytedeco.javacv.FrameGrabber.Exception;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+
+import com.box.sdk.BoxAPIConnection;
+import com.box.sdk.BoxFile;
+import com.box.sdk.BoxFolder;
+import com.box.sdk.BoxItem.Info;
 
 /**
  * Controller class.
@@ -37,6 +60,11 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     private final YOLOBboxView view;
 
     /**
+     * Timer for quickly cycling through frames Is not currently used
+     */
+    private Timer timer;
+
+    /**
      * Updates view to display model.
      *
      * @param model
@@ -49,9 +77,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Get model info
          */
-        String videoLocation = model.videoLocation();
-        String exportLocation = model.exportLocation();
-        int itemIndex = model.itemIndex();
         int currentFrame = model.currentFrame();
         int frameRate = model.frameRate();
         int frameJump = model.frameJump();
@@ -61,9 +86,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         /*
          * Update view to reflect changes in model
          */
-        view.updateVideoLocationTextDisplay(videoLocation);
-        view.updateExportLocationTextDisplay(exportLocation);
-        view.updateItemIndexTextDisplay(itemIndex);
         view.updateCurrentFrameTextDisplay(currentFrame);
         view.updateFrameRateTextDisplay(frameRate);
         view.updateFrameJumpTextDisplay(frameJump);
@@ -83,10 +105,53 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     public YOLOBboxController1(YOLOBboxModel model, YOLOBboxView view) {
         this.model = model;
         this.view = view;
+        BufferedImage scaled = (BufferedImage) this
+                .getScaledImage(this.model.master());
+        this.model.setScaled(scaled);
+        BufferedImage lines = deepCopy(scaled);
+        this.model.setLines(lines);
+
+        //load the video
+        this.loadVideo();
+        //set the default frame jump to the frame rate of the video
+        this.model.setFrameJump(this.model.frameRate());
         /*
          * Update view to reflect initial value of model
          */
         this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    private void loadVideo() {
+        File file = this.model.file();
+
+        //try to load the file and load the first frame
+        try {
+            FFmpegFrameGrabber frameGrabber = new FFmpegFrameGrabber(
+                    String.valueOf(file));
+            this.model.setFrameGrabber(frameGrabber);
+            frameGrabber.start();
+            //make sure the file is a video file and has frames
+            if (frameGrabber.hasVideo()
+                    && frameGrabber.getLengthInFrames() > 0) {
+                frameGrabber.setAudioChannels(0);
+                Java2DFrameConverter j = new Java2DFrameConverter();
+                frameGrabber.setFrameNumber(0);
+                Image bi = j.convert(frameGrabber.grabImage());
+                this.model.setMaster(bi);
+                BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
+                this.model.setScaled(scaled);
+                this.model.setFrameRate((int) frameGrabber.getFrameRate());
+                this.model
+                        .setTotalFrames(frameGrabber.getLengthInVideoFrames());
+
+            }
+            frameGrabber.stop();
+
+            this.model.setCurrentFrame(frameGrabber.getFrameNumber());
+
+        } catch (IOException e) {
+            System.out.println("Trouble Loading File");
+        }
     }
 
     /**
@@ -98,94 +163,80 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update model in response to this event
          */
         this.model.setVideoLocation("");
-        this.model.setExportLocation("");
         /*
          * Update view to reflect changes in model
          */
         this.updateViewToMatchModel(this.model, this.view);
     }
 
+    private void outputFrame(int id, String fileLocation, String className,
+            BufferedImage image, YOLO yolo) {
+        this.outputImage(id, fileLocation, className, image);
+        this.outputData(id, fileLocation, className, yolo);
+    }
+
     /**
-     * Processes browseVideoLocation event.
+     * Takes the given int and returns a string of the int with leading zeros to
+     * make the string 5 characters long.
      *
-     * @param input
-     *            value of input text (provided by view)
+     * @param i
+     *            an integer less than 100,000
+     * @return
      */
-    @Override
-    public void processBrowseVideoLocationEvent() {
-        //Create a file chooser
-        final JFileChooser fc = new JFileChooser();
-        //TODO remove the next line. It is only there for testing.
-        fc.setCurrentDirectory(new File(
-                "C:\\Users\\Public\\Videos\\Sample Videos\\Wildlife.wmv"));
-        int returnVal = fc.showOpenDialog(fc);
-
-        //if they chose a file
-        if (returnVal == JFileChooser.APPROVE_OPTION) {
-            File file = fc.getSelectedFile();
-
-            //try to load the file and load the first frame
-            try {
-                FFmpegFrameGrabber frameGrabber = new FFmpegFrameGrabber(
-                        String.valueOf(file));
-                this.model.setFrameGrabber(frameGrabber);
-                frameGrabber.start();
-                //make sure the file is a video file and has frames
-                if (frameGrabber.hasVideo()
-                        && frameGrabber.getLengthInFrames() > 0) {
-                    frameGrabber.setAudioChannels(0);
-                    Java2DFrameConverter j = new Java2DFrameConverter();
-                    frameGrabber.setFrameNumber(0);
-                    Image bi = j.convert(frameGrabber.grabImage());
-                    this.model.setMaster(bi);
-                    BufferedImage scaled = (BufferedImage) this
-                            .getScaledImage(bi);
-                    this.model.setScaled(scaled);
-                    this.model.setFrameRate((int) frameGrabber.getFrameRate());
-                    this.model.setTotalFrames(
-                            frameGrabber.getLengthInVideoFrames());
-
-                }
-                frameGrabber.stop();
-
-                /*
-                 * Update model in response to this event
-                 */
-                this.model.setVideoLocation(String.valueOf(file));
-                this.model.setFile(file);
-                this.model.setCurrentFrame(frameGrabber.getFrameNumber());
-
-            } catch (IOException e) {
-                System.out.println("Trouble Loading File");
-            }
+    private String formattedInteger(int i) {
+        String s = Integer.toString(i);
+        while (s.length() < 5) {
+            s = "0" + s;
         }
-        /*
-         * Update view to reflect changes in model
-         */
-        this.updateViewToMatchModel(this.model, this.view);
+        return s;
     }
 
-    /**
-     * Processes BrowseExportLocation event.
-     */
-    @Override
-    public void processBrowseExportLocationEvent() {
-        /*
-         * Update model in response to this event
-         */
-        //Create a file chooser
-        final JFileChooser fc = new JFileChooser();
-        int returnVal = fc.showOpenDialog(fc);
+    private void outputImage(int id, String fileLocation, String className,
+            BufferedImage image) {
+        String formattedID = this.formattedInteger(id);
+        String fileExtension = ".jpg";
+        String fileName = fileLocation + className + "_" + formattedID
+                + fileExtension;
 
-        if (returnVal == JFileChooser.APPROVE_OPTION) {
-            File file = fc.getSelectedFile();
+        File imageFile = new File(fileName);
+        //build the path to the file
+        imageFile.getParentFile().mkdirs();
+        //create the file
+        FileHelper.createFile(imageFile);
 
-            this.model.setExportLocation(String.valueOf(file));
+        try {
+            ImageIO.write(image, "jpg", imageFile);
+        } catch (IOException e) {
+            System.err.println("Problem exporting to jpg");
+            e.printStackTrace();
         }
-        /*
-         * Update view to reflect changes in model
-         */
-        this.updateViewToMatchModel(this.model, this.view);
+
+    }
+
+    private void outputData(int id, String fileLocation, String className,
+            YOLO yolo) {
+        PrintWriter writer;
+
+        String formattedID = this.formattedInteger(id);
+        String fileExtension = ".txt";
+
+        File dataFile = new File(
+                fileLocation + className + "_" + formattedID + fileExtension);
+        //build the path to the file
+        dataFile.getParentFile().mkdirs();
+        //create the file
+        FileHelper.createFile(dataFile);
+
+        try {
+            writer = new PrintWriter(dataFile, "UTF-8");
+            //print [item index] [x] [y] [width] [height]
+            writer.println(this.model.itemIndex() + " " + yolo.x() + " "
+                    + yolo.y() + " " + yolo.width() + " " + yolo.height());
+            writer.close();
+        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            System.err.println("Problem exporting to text file");
+        }
+
     }
 
     /**
@@ -193,21 +244,212 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      */
     @Override
     public void processExportEvent() {
-        /*
-         * Update model in response to this event
-         */
 
-        //TODO process the video and create a picture file and text
-        //file for every frame of the video and send it to the
-        //location and then compress it into a .zip file
+        List<YOLO> yolo = this.model.yolo();
+        //the highest number to iterate to
+        int max = this.model.totalFrames() - 1;
+        List<Integer> exportedIDs = new LinkedList<Integer>();
 
-        //for now, just fill in the other bounding boxes
-        this.processCV();
+        //create the export directory
+        //get the directory the program was launched in
+        String outputDirectory = FileHelper.userOutputUrl();
+        File outputFolder = new File(outputDirectory);
+        //build the path to the file
+        outputFolder.mkdirs();
+        int lastIndex = 0;
+        //download the pfile
+        //Get the folder in box where the pfile is at
+        BoxFolder classFolder = BoxFolder.getRootFolder(this.model.api());
+        //to the yolo folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_yolo);
+        //to the data folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_data);
+        //to the class folder
+        String[] classPath = { this.model.className() };
+        if (!BoxHelper.pathExists(classFolder, classPath)) {
+            //the the class folder did not exist, create it
+            BoxHelper.createFolder(classFolder, this.model.className());
+        }
+        classFolder = BoxHelper.getSubFolder(classFolder, classPath);
+        if (BoxHelper.fileExists(classFolder, "pfile.txt")) {
+            //download it
+            try {
+                this.DownloadFile(this.model.api(), classFolder, "pfile.txt",
+                        FileHelper.userProgramUrl());
+            } catch (InvocationTargetException | IOException
+                    | InterruptedException e) {
+                System.err
+                        .println("Error occured trying to download: pfile.txt");
+                e.printStackTrace();
+            }
+            //parse the file for the line that starts with the name of the video file
+            File pFile = new File(FileHelper.userProgramUrl() + "pfile.txt");
+            try {
+                BufferedReader pFileBufferedReader = new BufferedReader(
+                        new FileReader(pFile));
+                String nextLine;
+                String previousLine = "";
+                Boolean lineFound = false;
+                while ((nextLine = pFileBufferedReader.readLine()) != null) {
+                    previousLine = nextLine;
+                }
+                pFileBufferedReader.close();
+                //cut off everything before the comma, the comma, and the space
+                previousLine = previousLine
+                        .substring(previousLine.indexOf(',') + 2);
+                //get the last index value from that line
+                lastIndex = Integer.parseInt(previousLine);
+            } catch (IOException e) {
+                System.err.println(
+                        "pfile.txt could not be found on local machine");
+                e.printStackTrace();
+            }
+        } else {
+            //the pfile does not exist so start at 0
+            lastIndex = 0;
+        }
+        //get the class name
+        String className = this.model.className();
+
+        FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+        try {
+            frameGrabber.start();
+            Java2DFrameConverter j = new Java2DFrameConverter();
+
+            //counter for iterating through yolo
+            int i = 0;
+            while (i < max) {
+                //get the YOLO values
+                this.findYOLOValues(i);
+                //iterate through the yolos and create the files for the ones with data
+                YOLO next = yolo.get(i);
+                if (next.x() > 0.0 && next.y() > 0.0 && next.width() > 0.0
+                        && next.height() > 0.0) {
+                    frameGrabber.setFrameNumber(i);
+                    BufferedImage image = j.convert(frameGrabber.grabImage());
+                    int id = lastIndex + 1;
+                    lastIndex++;
+                    this.outputFrame(id, outputDirectory, className, image,
+                            next);
+                    exportedIDs.add(id);
+                }
+                i++;
+            }
+            frameGrabber.close();
+            System.out.println("Output Files created in : " + outputDirectory);
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        this.uploadTextFiles(exportedIDs, outputDirectory, classFolder,
+                className);
+        this.uploadImageFiles(exportedIDs, outputDirectory, classFolder,
+                className);
+
+        //change pfiles
+        try {
+            //Append the pfile
+            BufferedWriter pFileBufferedWriter = new BufferedWriter(
+                    new FileWriter(FileHelper.userProgramUrl() + "pfile.txt",
+                            true));
+            pFileBufferedWriter.newLine();
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+            String date = df.format(new Date());
+            pFileBufferedWriter.write(date + ", " + lastIndex);
+            pFileBufferedWriter.close();
+        } catch (IOException e) {
+            System.err.println("Failed to append pfile");
+            e.printStackTrace();
+        }
+        //send pfile to export folder
+        File source = new File(FileHelper.userProgramUrl() + "pfile.txt");
+        Path sourcePath = source.toPath();
+        File destination = new File(FileHelper.userOutputUrl() + "pfile.txt");
+        Path destinationPath = destination.toPath();
+        try {
+            Files.copy(sourcePath, destinationPath,
+                    StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("Problem sending pfile to export folder");
+            e.printStackTrace();
+        }
+        //re-upload pfiles
+        BoxHelper.reuploadFile("pfile.txt", classFolder);
+
+        //TODO delete local files
 
         /*
          * Update view to reflect changes in model
          */
         this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    /**
+     * Downloads the file with the name {fileName} in the first level of
+     * {folder} and puts it in the location on the local machine given by {url}.
+     * The {api} is needed to have access to box.
+     *
+     * @param api
+     * @param folder
+     * @param fileName
+     * @param url
+     *            Can be relative or absolute but must end with a file separator
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws InvocationTargetException
+     */
+    private void DownloadFile(BoxAPIConnection api, BoxFolder folder,
+            String fileName, String url) throws IOException,
+            InvocationTargetException, InterruptedException {
+        Iterator<Info> it = folder.getChildren().iterator();
+        while (it.hasNext()) {
+            Info info = it.next();
+            //if its a file and has the name of the selected video
+            if (info instanceof BoxFile.Info
+                    && info.getName().equals(fileName)) {
+                BoxFile file = new BoxFile(api, info.getID());
+                //download the file and put it in the output stream
+                FileOutputStream os;
+                os = new FileOutputStream(url + file.getInfo().getName());
+                file.download(os);
+                os.close();
+            }
+        }
+    }
+
+    private void uploadTextFiles(List<Integer> exportedIDs,
+            String fileDirectory, BoxFolder folder, String className) {
+
+        String fileExtension = ".txt";
+        for (int id : exportedIDs) {
+            String formattedID = this.formattedInteger(id);
+            String fileName = className + "_" + formattedID + fileExtension;
+            BoxHelper.uploadFile(fileName, folder);
+        }
+    }
+
+    private void uploadImageFiles(List<Integer> exportedIDs,
+            String fileDirectory, BoxFolder folder, String className) {
+
+        String fileExtension = ".jpg";
+        for (int id : exportedIDs) {
+            String formattedID = this.formattedInteger(id);
+            String fileName = className + "_" + formattedID + fileExtension;
+            BoxHelper.uploadFile(fileName, folder);
+        }
+    }
+
+    @Override
+    public void processReviewEvent() {
+        /*
+         * TODO: Open new window to display the preview in full screen
+         */
+    }
+
+    @Override
+    public void processFillInFramesEvent() {
+        this.processCV();
     }
 
     /**
@@ -228,8 +470,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             frameGrabber.start();
             int jump = this.model.frameJump();
             //load the the frameJump-th previous frame
-            if ((jump + 1) < currentFrame) {
-                frameGrabber.setFrameNumber(currentFrame - (jump + 1));
+            if (jump <= currentFrame) {
+                frameGrabber.setFrameNumber(currentFrame - jump);
             } else {
                 frameGrabber.setFrameNumber(0);
             }
@@ -269,16 +511,17 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setFrameJump(this.view.getFrameJump());
         FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
         int currentFrame = this.model.currentFrame();
-        int distToEnd = this.model.totalFrames() - this.model.currentFrame();
+        int distToEnd = (this.model.totalFrames() - 1)
+                - this.model.currentFrame();
         Frame f = new Frame();
         try {
             frameGrabber.start();
             int jump = this.model.frameJump();
             //load the the frameJump-th next frame
             if (distToEnd > jump) {
-                frameGrabber.setFrameNumber(currentFrame + jump - 1);
+                frameGrabber.setFrameNumber(currentFrame + jump);
             } else {
-                frameGrabber.setFrameNumber(this.model.totalFrames() - 2);
+                frameGrabber.setFrameNumber(this.model.totalFrames() - 1);
             }
             f = frameGrabber.grabImage();
             Java2DFrameConverter j = new Java2DFrameConverter();
@@ -312,6 +555,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.redrawLines(lines,
                 this.model.bbox().get(this.model.currentFrame()));
         this.model.setLines(lines);
+        this.view.updateButtonAreaSize();
         /*
          * Update view to reflect changes in model
          */
@@ -450,7 +694,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
     /**
      * Processes the CV by taking the given bboxes and filling in the frames
-     * between
+     * between using linear interpolation
      */
     private void processCV() {
         int i = 0;
@@ -539,7 +783,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         } else {
             //no bboxes were set
         }
-
+        System.out.println("CV Proccessed");
     }
 
     /**
@@ -549,22 +793,20 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     private void findYOLOValues(int frame) {
         List<BBox> bbox = this.model.bbox();
         List<YOLO> yolo = this.model.yolo();
-        BBox p = bbox.remove(frame);
+        BBox p = bbox.get(frame);
         //calculate the values for YOLO from the bbox
-        int width = (int) ((Math.abs(p.x1() - p.x2())
-                * this.model.videoWidth()));
-        int height = (int) ((Math.abs(p.y1() - p.y2())
-                * this.model.videoHeight()));
-        int x = (int) ((p.x1() + p.x2()) * this.model.videoWidth()) / 2;
-        int y = (int) ((p.y1() + p.y2()) * this.model.videoWidth()) / 2;
+        double width = (Math.abs(p.x1() - p.x2()));
+        double height = (Math.abs(p.y1() - p.y2()));
+        double x = (p.x1() + p.x2()) / 2;
+        double y = (p.y1() + p.y2()) / 2;
         //add the values to the yolo map
         YOLO ny = new YOLO(x, y, width, height);
         yolo.add(frame, ny);
-        //re-add p to bbox
-        bbox.add(this.model.currentFrame(), p);
     }
 
     /*
+     * This is not my code. I found it online and just removed some unneeded
+     * parts. Not currently used but might be needed for better object tracking.
      * Converts a buffered image to a Mat needed for opencv
      */
     private static Mat img3Mat(BufferedImage bi) {
@@ -575,6 +817,10 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         return mat;
     }
 
+    /*
+     * This is not my code. I found it online and just removed some unneeded
+     * parts. Not currently used but might be needed for better object tracking.
+     */
     public static Mat img2Mat(BufferedImage in) {
         Mat out;
         byte[] data;
@@ -605,6 +851,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     }
 
     /*
+     * This is not my code. I found it online and just removed some unneeded
+     * parts. Not currently used but might be needed for better object tracking.
      * Converts a Mat to a buffered image
      */
     private static BufferedImage mat2Img(Mat in) {
@@ -733,6 +981,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
     }
 
+    /*
+     * This is not my code. I found it online.
+     */
     static BufferedImage deepCopy(BufferedImage bi) {
         ColorModel cm = bi.getColorModel();
         boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();

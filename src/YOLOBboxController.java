@@ -20,210 +20,81 @@ public interface YOLOBboxController {
 
     /**
      * Processes event to reset model.
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = ""  and
-     * this.model.output = ""  and
-     * [this.view has been updated to match this.model]
-     * </pre>
      */
     void processResetEvent();
 
     /**
-     * Processes event to browse for the location of a video file and insert the
-     * location into the corresponding textbox.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
-     */
-    void processBrowseVideoLocationEvent();
-
-    /**
-     * Processes event to browse for the location of a folder to send output
-     * files to.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
-     */
-    void processBrowseExportLocationEvent();
-
-    /**
-     * Processes event to export data to the given location and finalize it.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Creates txt and image files for every frame with a BBox, zips up the
+     * folder, and uploads it to box.
      */
     void processExportEvent();
 
     /**
-     * Processes event to move the video back the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Opens a new window to quickly cycle through them before finalizing
+     */
+    void processReviewEvent();
+
+    /**
+     * Fills in the frames between the frames where BBoxes were given
+     */
+    void processFillInFramesEvent();
+
+    /**
+     * Moves the video back the given number of frames or to the first frame if
+     * there are too few frames left. Note: there is a bug where it wont move
+     * only only a single frame sometimes. I suspect it has something to do with
+     * audio in the video.
      */
     void processFramesBackEvent();
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Moves the video forward the given number of frames or to the end if there
+     * are not enough frames left. Note: there is a bug where it wont move
+     * forward only a single frame sometimes. I suspect it has something to do
+     * with audio in the video.
      */
     void processFramesForwardEvent();
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Refactors the window based on the new size of the window
      */
     void processResizeEvent();
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the BBox for the current frame by making the coordinates for the
+     * last corner to be changed. So the BBox will always hold the location of
+     * the last 2 clicks. Updates the crosshairs.
      */
     void processMouseClickedEvent(int x, int y);
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the crosshairs.
      */
     void processMouseEnteredEvent(int x, int y);
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the crosshairs.
      */
     void processMouseExitedEvent(int x, int y);
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the crosshairs.
      */
     void processMousePressedEvent(int x, int y);
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the crosshairs.
      */
     void processMouseReleasedEvent(int x, int y);
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the crosshairs. TODO: Allow BBoxes to be set by clicking and
+     * dragging.
      */
     void processMouseDraggedEvent(int x, int y);
 
     /**
-     * Processes event to move the video forward the number of given frames.
-     *
-     * @param input
-     *            string to be copied
-     *
-     * @updates this.model, this.view
-     * @ensures <pre>
-     * this.model.input = input  and
-     * this.model.output = input  and
-     * [this.view has been updated to match this.model]
-     * </pre>
+     * Updates the crosshairs.
      */
     void processMouseMovedEvent(int x, int y);
 

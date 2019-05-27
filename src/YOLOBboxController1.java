@@ -10,7 +10,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -23,11 +22,11 @@ import java.nio.file.StandardCopyOption;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.imageio.ImageIO;
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -37,10 +36,8 @@ import org.bytedeco.javacv.Java2DFrameConverter;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
-import com.box.sdk.BoxAPIConnection;
-import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxItem.Info;
+import com.box.sdk.BoxUser;
 
 /**
  * Controller class.
@@ -245,71 +242,145 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     @Override
     public void processExportEvent() {
 
-        List<YOLO> yolo = this.model.yolo();
-        //the highest number to iterate to
-        int max = this.model.totalFrames() - 1;
-        List<Integer> exportedIDs = new LinkedList<Integer>();
-
         //create the export directory
-        //get the directory the program was launched in
         String outputDirectory = FileHelper.userOutputUrl();
         File outputFolder = new File(outputDirectory);
-        //build the path to the file
         outputFolder.mkdirs();
+
+        //get the data pfile and the last index from it
         int lastIndex = 0;
-        //download the pfile
-        //Get the folder in box where the pfile is at
-        BoxFolder classFolder = BoxFolder.getRootFolder(this.model.api());
-        //to the yolo folder
-        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_yolo);
-        //to the data folder
-        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_data);
-        //to the class folder
-        String[] classPath = { this.model.className() };
-        if (!BoxHelper.pathExists(classFolder, classPath)) {
-            //the the class folder did not exist, create it
-            BoxHelper.createFolder(classFolder, this.model.className());
+        if (this.getDataPFile()) {
+            lastIndex = this.getLastIndex();
         }
-        classFolder = BoxHelper.getSubFolder(classFolder, classPath);
-        if (BoxHelper.fileExists(classFolder, "pfile.txt")) {
-            //download it
+
+        //get the video pfile
+        //if the pfile doesnt exist on box, just create a new local one
+        if (!BoxHelper.getVideoPFile(this.model.api(),
+                this.model.className())) {
+            File file = new File(
+                    FileHelper.userProgramUrl() + Config.raw_video_pfile_name);
             try {
-                this.DownloadFile(this.model.api(), classFolder, "pfile.txt",
-                        FileHelper.userProgramUrl());
-            } catch (InvocationTargetException | IOException
-                    | InterruptedException e) {
-                System.err
-                        .println("Error occured trying to download: pfile.txt");
-                e.printStackTrace();
-            }
-            //parse the file for the line that starts with the name of the video file
-            File pFile = new File(FileHelper.userProgramUrl() + "pfile.txt");
-            try {
-                BufferedReader pFileBufferedReader = new BufferedReader(
-                        new FileReader(pFile));
-                String nextLine;
-                String previousLine = "";
-                Boolean lineFound = false;
-                while ((nextLine = pFileBufferedReader.readLine()) != null) {
-                    previousLine = nextLine;
-                }
-                pFileBufferedReader.close();
-                //cut off everything before the comma, the comma, and the space
-                previousLine = previousLine
-                        .substring(previousLine.indexOf(',') + 2);
-                //get the last index value from that line
-                lastIndex = Integer.parseInt(previousLine);
+                file.createNewFile();
             } catch (IOException e) {
-                System.err.println(
-                        "pfile.txt could not be found on local machine");
                 e.printStackTrace();
             }
-        } else {
-            //the pfile does not exist so start at 0
-            lastIndex = 0;
         }
-        //get the class name
+
         String className = this.model.className();
+
+        BoxFolder classFolder = BoxFolder.getRootFolder(this.model.api());
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_yolo);
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_data);
+        String[] classPath = { className };
+        classFolder = BoxHelper.getSubFolder(classFolder, classPath);
+
+        List<Integer> exportedIDs = this.createExportFiles(lastIndex);
+
+        //upload the text and image files to box
+        this.uploadTextFiles(exportedIDs, outputDirectory, classFolder,
+                className);
+        this.uploadImageFiles(exportedIDs, outputDirectory, classFolder,
+                className);
+
+        //change pfile
+        try {
+            this.appendPFile(exportedIDs.get(exportedIDs.size() - 1));
+        } catch (IOException e) {
+            System.err.println("Failed to append pfile");
+            e.printStackTrace();
+        }
+
+        //send pfile to export folder
+        try {
+            this.movePFileToExport();
+        } catch (IOException e) {
+            System.err.println("Problem moving pfile to export");
+            e.printStackTrace();
+        }
+
+        //re-upload pfile
+        BoxHelper.reuploadFile(Config.training_data_pfile_name, classFolder);
+
+        //change video pfile
+        try {
+            this.appendVideoPFile(exportedIDs.get(0),
+                    exportedIDs.get(exportedIDs.size() - 1));
+        } catch (IOException e) {
+            System.err.println("Failed to append video pfile");
+            e.printStackTrace();
+        }
+
+        //send video pfile to export folder
+        try {
+            this.moveVideoPFileToExport();
+        } catch (IOException e) {
+            System.err.println("Problem moving video pfile to export");
+            e.printStackTrace();
+        }
+
+        //reupload video pfile
+        BoxFolder videoFolder = BoxFolder.getRootFolder(this.model.api());
+        videoFolder = BoxHelper.getSubFolder(videoFolder, Config.path_to_yolo);
+        videoFolder = BoxHelper.getSubFolder(videoFolder,
+                Config.path_to_videos);
+        String[] videoPath = { className };
+        videoFolder = BoxHelper.getSubFolder(videoFolder, videoPath);
+        BoxHelper.reuploadFile(Config.raw_video_pfile_name, videoFolder);
+
+        //delete local files
+        int response = JOptionPane.showConfirmDialog(null,
+                "Export Successful! Delete Local Files?");
+        if (response == JOptionPane.YES_OPTION) {
+            //delete export folder
+            File exportFolder = new File(FileHelper.userOutputUrl());
+            FileHelper.deleteFolder(exportFolder);
+            //delete pfiles
+            File pfile = new File(FileHelper.userProgramUrl()
+                    + Config.training_data_pfile_name);
+            pfile.delete();
+            File videopfile = new File(
+                    FileHelper.userProgramUrl() + Config.raw_video_pfile_name);
+            videopfile.delete();
+            //delete video
+            File videoFile = this.model.file();
+            videoFile.delete();
+        }
+    }
+
+    private void moveVideoPFileToExport() throws IOException {
+        File source = new File(
+                FileHelper.userProgramUrl() + Config.raw_video_pfile_name);
+        Path sourcePath = source.toPath();
+        File destination = new File(
+                FileHelper.userOutputUrl() + Config.raw_video_pfile_name);
+        Path destinationPath = destination.toPath();
+        Files.copy(sourcePath, destinationPath,
+                StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private void appendVideoPFile(int startIndex, int lastIndex)
+            throws IOException {
+        //Append the pfile
+        BufferedWriter pFileBufferedWriter = new BufferedWriter(new FileWriter(
+                FileHelper.userProgramUrl() + Config.raw_video_pfile_name,
+                true));
+        pFileBufferedWriter.newLine();
+        DateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+        String date = df.format(new Date());
+        pFileBufferedWriter
+                .write(this.model.file().getName() + ", " + date + ", "
+                        + BoxUser.getCurrentUser(this.model.api()).getInfo()
+                                .getName()
+                        + ", " + startIndex + ", " + lastIndex);
+        pFileBufferedWriter.close();
+    }
+
+    private List<Integer> createExportFiles(int lastIndex) {
+        String className = this.model.className();
+        int max = this.model.totalFrames() - 1;
+        List<YOLO> yolo = this.model.yolo();
+        List<Integer> exportedIDs = new LinkedList<Integer>();
+        String outputDirectory = FileHelper.userOutputUrl();
 
         FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
         try {
@@ -338,84 +409,97 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             frameGrabber.close();
             System.out.println("Output Files created in : " + outputDirectory);
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        return exportedIDs;
+    }
 
-        this.uploadTextFiles(exportedIDs, outputDirectory, classFolder,
-                className);
-        this.uploadImageFiles(exportedIDs, outputDirectory, classFolder,
-                className);
-
-        //change pfiles
-        try {
-            //Append the pfile
-            BufferedWriter pFileBufferedWriter = new BufferedWriter(
-                    new FileWriter(FileHelper.userProgramUrl() + "pfile.txt",
-                            true));
-            pFileBufferedWriter.newLine();
-            DateFormat df = new SimpleDateFormat("MM/dd/yyyy");
-            String date = df.format(new Date());
-            pFileBufferedWriter.write(date + ", " + lastIndex);
-            pFileBufferedWriter.close();
-        } catch (IOException e) {
-            System.err.println("Failed to append pfile");
-            e.printStackTrace();
-        }
-        //send pfile to export folder
-        File source = new File(FileHelper.userProgramUrl() + "pfile.txt");
+    private void movePFileToExport() throws IOException {
+        File source = new File(
+                FileHelper.userProgramUrl() + Config.training_data_pfile_name);
         Path sourcePath = source.toPath();
-        File destination = new File(FileHelper.userOutputUrl() + "pfile.txt");
+        File destination = new File(
+                FileHelper.userOutputUrl() + Config.training_data_pfile_name);
         Path destinationPath = destination.toPath();
-        try {
-            Files.copy(sourcePath, destinationPath,
-                    StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            System.err.println("Problem sending pfile to export folder");
-            e.printStackTrace();
-        }
-        //re-upload pfiles
-        BoxHelper.reuploadFile("pfile.txt", classFolder);
+        Files.copy(sourcePath, destinationPath,
+                StandardCopyOption.REPLACE_EXISTING);
+    }
 
-        //TODO delete local files
-
-        /*
-         * Update view to reflect changes in model
-         */
-        this.updateViewToMatchModel(this.model, this.view);
+    private void appendPFile(int lastIndex) throws IOException {
+        //Append the pfile
+        BufferedWriter pFileBufferedWriter = new BufferedWriter(new FileWriter(
+                FileHelper.userProgramUrl() + Config.training_data_pfile_name,
+                true));
+        pFileBufferedWriter.newLine();
+        DateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+        String date = df.format(new Date());
+        pFileBufferedWriter.write(date + ", " + lastIndex);
+        pFileBufferedWriter.close();
     }
 
     /**
-     * Downloads the file with the name {fileName} in the first level of
-     * {folder} and puts it in the location on the local machine given by {url}.
-     * The {api} is needed to have access to box.
+     * Downloads the pfile from the data folder on box. Returns true if it was
+     * successfully downloaded and false if it wasn't.
      *
-     * @param api
-     * @param folder
-     * @param fileName
-     * @param url
-     *            Can be relative or absolute but must end with a file separator
-     * @throws IOException
-     * @throws InterruptedException
-     * @throws InvocationTargetException
+     * @return
      */
-    private void DownloadFile(BoxAPIConnection api, BoxFolder folder,
-            String fileName, String url) throws IOException,
-            InvocationTargetException, InterruptedException {
-        Iterator<Info> it = folder.getChildren().iterator();
-        while (it.hasNext()) {
-            Info info = it.next();
-            //if its a file and has the name of the selected video
-            if (info instanceof BoxFile.Info
-                    && info.getName().equals(fileName)) {
-                BoxFile file = new BoxFile(api, info.getID());
-                //download the file and put it in the output stream
-                FileOutputStream os;
-                os = new FileOutputStream(url + file.getInfo().getName());
-                file.download(os);
-                os.close();
-            }
+    private boolean getDataPFile() {
+
+        //download the pfile
+        //Get the folder in box where the pfile is at
+        BoxFolder classFolder = BoxFolder.getRootFolder(this.model.api());
+        //to the yolo folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_yolo);
+        //to the data folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_data);
+        //to the class folder
+        String[] classPath = { this.model.className() };
+        if (!BoxHelper.pathExists(classFolder, classPath)) {
+            //the the class folder did not exist, create it
+            BoxHelper.createFolder(classFolder, this.model.className());
         }
+        classFolder = BoxHelper.getSubFolder(classFolder, classPath);
+        if (BoxHelper.fileExists(classFolder, "pfile.txt")) {
+            //download it
+            try {
+                BoxHelper.DownloadFile(this.model.api(), classFolder,
+                        "pfile.txt", FileHelper.userProgramUrl());
+            } catch (InvocationTargetException | IOException
+                    | InterruptedException e) {
+                System.err
+                        .println("Error occured trying to download: pfile.txt");
+                e.printStackTrace();
+                return false;
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private int getLastIndex() {
+        int lastIndex = 0;
+        //parse the file for the line that starts with the name of the video file
+        File pFile = new File(FileHelper.userProgramUrl() + "pfile.txt");
+        try {
+            BufferedReader pFileBufferedReader = new BufferedReader(
+                    new FileReader(pFile));
+            String nextLine;
+            String previousLine = "";
+            while ((nextLine = pFileBufferedReader.readLine()) != null) {
+                previousLine = nextLine;
+            }
+            pFileBufferedReader.close();
+            //cut off everything before the comma, the comma, and the space
+            previousLine = previousLine
+                    .substring(previousLine.indexOf(',') + 2);
+            //get the last index value from that line
+            lastIndex = Integer.parseInt(previousLine);
+        } catch (IOException e) {
+            System.err.println("pfile.txt could not be found on local machine");
+            e.printStackTrace();
+        }
+        return lastIndex;
     }
 
     private void uploadTextFiles(List<Integer> exportedIDs,

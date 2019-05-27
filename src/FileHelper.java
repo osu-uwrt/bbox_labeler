@@ -1,8 +1,55 @@
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
 public class FileHelper {
+
+    /**
+     * Checks if the file has already been done.
+     *
+     * @param file
+     * @return false if the video has not been done and true otherwise
+     * @throws IOException
+     */
+    public static Boolean hasVideoBeenDone(String videoName)
+            throws IOException {
+        File videopfile = new File(
+                FileHelper.userProgramUrl() + Config.raw_video_pfile_name);
+        BufferedReader pFileBufferedReader = new BufferedReader(
+                new FileReader(videopfile));
+        String nextLine;
+        while ((nextLine = pFileBufferedReader.readLine()) != null) {
+            if (nextLine.contains(videoName)) {
+                pFileBufferedReader.close();
+                return true;
+            }
+        }
+        pFileBufferedReader.close();
+        return false;
+    }
+
+    /**
+     * Delete a given file or folder. If it is a folder delete all files and
+     * folders in it recursively.
+     *
+     *
+     * @param file
+     * @return True if it was deleted and false otherwise
+     */
+    public static boolean deleteFolder(File file) {
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            for (int i = 0; i < children.length; i++) {
+                boolean success = deleteFolder(children[i]);
+                if (!success) {
+                    return false;
+                }
+            }
+        }
+        return file.delete();
+    }
 
     /**
      * Creates folders on the local machine that are not yet created and then
@@ -47,7 +94,7 @@ public class FileHelper {
     /**
      * Builds a string for the absolute path to the user's program folder.
      *
-     * @return the path of the directory to put the video in
+     * @return the path of the directory to put the files to be exported
      */
     public static String userProgramUrl() {
         return System.getProperty("user.home") + File.separator + "Scylla"

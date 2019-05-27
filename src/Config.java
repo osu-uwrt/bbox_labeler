@@ -8,6 +8,8 @@ public class Config {
     public static String local_save_folder_name = "Saves";
     public static String[] path_to_yolo = { "The Underwater Robotics Team",
             "Software", "YOLO" };
-    public static String[] path_to_data = { "Training Data" };
+    public static String[] path_to_data = { "TrainingData" };
     public static String[] path_to_videos = { "Raw" };
+    public static String training_data_pfile_name = "pfile.txt";
+    public static String raw_video_pfile_name = "raw_pfile.txt";
 }

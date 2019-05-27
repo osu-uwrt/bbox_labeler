@@ -114,6 +114,8 @@ public final class NewSessionController1 implements NewSessionController {
      * @param videoFolder
      */
     private void addVideosToView(BoxFolder videoFolder) {
+        //download the video pfile
+        BoxHelper.getVideoPFile(this.model.api(), this.view.getSelectedClass());
         BoxAPIConnection api = this.model.api();
         Iterator<Info> it = videoFolder.getChildren().iterator();
         while (it.hasNext()) {
@@ -148,7 +150,8 @@ public final class NewSessionController1 implements NewSessionController {
         try {
             InputStream bais = new ByteArrayInputStream(thumbnail);
             java.awt.Color c = this.model.getColorNeutral();
-            this.view.addVideo(ImageIO.read(bais), name, true, c);
+            boolean inColor = !FileHelper.hasVideoBeenDone(name);
+            this.view.addVideo(ImageIO.read(bais), name, inColor, c);
         } catch (IOException e) {
             e.printStackTrace();
         }

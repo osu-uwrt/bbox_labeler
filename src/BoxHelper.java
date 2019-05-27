@@ -1,10 +1,13 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 
+import com.box.sdk.BoxAPIConnection;
 import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
@@ -12,6 +15,77 @@ import com.box.sdk.BoxItem;
 import com.box.sdk.BoxItem.Info;
 
 public class BoxHelper {
+
+    /**
+     * Downloads the file with the name {fileName} in the first level of
+     * {folder} and puts it in the location on the local machine given by {url}.
+     * The {api} is needed to have access to box.
+     *
+     * @param api
+     * @param folder
+     * @param fileName
+     * @param url
+     *            Can be relative or absolute but must end with a file separator
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws InvocationTargetException
+     */
+    public static void DownloadFile(BoxAPIConnection api, BoxFolder folder,
+            String fileName, String url) throws IOException,
+            InvocationTargetException, InterruptedException {
+        Iterator<Info> it = folder.getChildren().iterator();
+        while (it.hasNext()) {
+            Info info = it.next();
+            //if its a file and has the name of the selected video
+            if (info instanceof BoxFile.Info
+                    && info.getName().equals(fileName)) {
+                BoxFile file = new BoxFile(api, info.getID());
+                //download the file and put it in the output stream
+                FileOutputStream os;
+                os = new FileOutputStream(url + file.getInfo().getName());
+                file.download(os);
+                os.close();
+            }
+        }
+    }
+
+    /**
+     * Downloads the pfile from the given class in the videos folder on Box to
+     * the local machine. If it is successfully downloaded, it returns true;
+     * otherwise it returns false.
+     *
+     * @param api
+     * @param className
+     * @return
+     */
+    public static boolean getVideoPFile(BoxAPIConnection api,
+            String className) {
+
+        //download the pfile
+        //Get the folder in box where the pfile is at
+        BoxFolder videoFolder = BoxFolder.getRootFolder(api);
+        //to the yolo folder
+        videoFolder = BoxHelper.getSubFolder(videoFolder, Config.path_to_yolo);
+        //to the data folder
+        videoFolder = BoxHelper.getSubFolder(videoFolder,
+                Config.path_to_videos);
+        //to the class folder
+        String[] videoPath = { className };
+        videoFolder = BoxHelper.getSubFolder(videoFolder, videoPath);
+        if (BoxHelper.fileExists(videoFolder, Config.raw_video_pfile_name)) {
+            //download it
+            try {
+                DownloadFile(api, videoFolder, Config.raw_video_pfile_name,
+                        FileHelper.userProgramUrl());
+            } catch (InvocationTargetException | IOException
+                    | InterruptedException e) {
+                System.err.println("Error occured trying to download: "
+                        + Config.raw_video_pfile_name);
+                e.printStackTrace();
+            }
+        }
+        return true;
+    }
 
     /**
      * Creates a new subfolder in the directory of the given BoxFolder.
@@ -150,17 +224,6 @@ public class BoxHelper {
         } else {
             return false;
         }
-    }
-
-    /**
-     * Checks if the file has already been done.
-     *
-     * @param file
-     * @return false if the video has not been done and true otherwise
-     */
-    public static Boolean hasVideoBeenDone(BoxFile file) {
-        //TODO: fill in method
-        return false;
     }
 
     /**

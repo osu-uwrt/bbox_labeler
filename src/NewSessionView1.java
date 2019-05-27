@@ -317,6 +317,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
                     filter);
             Image image = Toolkit.getDefaultToolkit().createImage(producer);
             thumbnail.setIcon(new ImageIcon(image));
+            name.setForeground(Color.GRAY);
         } else {
             //keep the image in color
             thumbnail.setIcon(new ImageIcon(video));

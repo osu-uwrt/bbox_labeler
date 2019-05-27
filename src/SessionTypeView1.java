@@ -109,7 +109,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
          * visible to the user now
          */
         this.pack();
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         this.setBounds(dim.width / 2 - this.getSize().width / 2,
                 dim.height / 2 - this.getSize().height / 2,
@@ -179,5 +179,10 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
     @Override
     public void setWelcomeLabel(String text) {
         this.welcomeLabel.setText(text);
+    }
+
+    @Override
+    public void disposeFrame() {
+        this.dispose();
     }
 }

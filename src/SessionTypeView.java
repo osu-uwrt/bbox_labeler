@@ -19,4 +19,6 @@ public interface SessionTypeView extends ActionListener {
     public void toggleButtons();
 
     public void setWelcomeLabel(String text);
+
+    public void disposeFrame();
 }

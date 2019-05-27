@@ -197,7 +197,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
          * visible to the user now
          */
         this.pack();
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         this.setBounds(dim.width / 2 - this.getSize().width / 2,
                 dim.height / 2 - this.getSize().height / 2,
@@ -317,6 +317,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
                     filter);
             Image image = Toolkit.getDefaultToolkit().createImage(producer);
             thumbnail.setIcon(new ImageIcon(image));
+            name.setForeground(Color.GRAY);
         } else {
             //keep the image in color
             thumbnail.setIcon(new ImageIcon(video));
@@ -384,11 +385,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
     @Override
     public String getSelectedClass() {
         return this.classComboBox.getSelectedItem().toString();
-    }
-
-    @Override
-    public void closeWindow() {
-        this.dispose();
     }
 
     @Override
@@ -590,6 +586,11 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
                 SwingUtilities.invokeLater(new myTask(this.view));
             }
         }
+    }
+
+    @Override
+    public void disposeFrame() {
+        this.dispose();
     }
 
 }

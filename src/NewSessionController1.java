@@ -4,7 +4,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -16,7 +15,6 @@ import javax.swing.SwingUtilities;
 import com.box.sdk.BoxAPIConnection;
 import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxItem;
 import com.box.sdk.BoxItem.Info;
 import com.box.sdk.ProgressListener;
 
@@ -58,22 +56,19 @@ public final class NewSessionController1 implements NewSessionController {
         BoxAPIConnection api = this.model.api();
         BoxFolder videoFolder = BoxFolder.getRootFolder(api);
         BoxFolder dataFolder = BoxFolder.getRootFolder(api);
-        if (this.DEBUG) {
-            System.out.println("Folder: " + videoFolder);
-        }
-        if (this.pathExists(videoFolder, this.model.pathToYOLO())) {
-            videoFolder = this.getSubFolder(videoFolder,
+        System.out.println("Folder: " + videoFolder);
+        if (BoxHelper.pathExists(videoFolder, this.model.pathToYOLO())) {
+            videoFolder = BoxHelper.getSubFolder(videoFolder,
                     this.model.pathToYOLO());
-            dataFolder = this.getSubFolder(dataFolder, this.model.pathToYOLO());
-            if (this.DEBUG) {
-                System.out.println("Folder: " + videoFolder);
-                listFolder(videoFolder);
-            }
-            if (this.pathExists(videoFolder, this.model.pathToVideos())) {
-                if (this.pathExists(dataFolder, this.model.pathToData())) {
-                    videoFolder = this.getSubFolder(videoFolder,
+            dataFolder = BoxHelper.getSubFolder(dataFolder,
+                    this.model.pathToYOLO());
+            System.out.println("Folder: " + videoFolder);
+            BoxHelper.listFolder(videoFolder);
+            if (BoxHelper.pathExists(videoFolder, this.model.pathToVideos())) {
+                if (BoxHelper.pathExists(dataFolder, this.model.pathToData())) {
+                    videoFolder = BoxHelper.getSubFolder(videoFolder,
                             this.model.pathToVideos());
-                    dataFolder = this.getSubFolder(dataFolder,
+                    dataFolder = BoxHelper.getSubFolder(dataFolder,
                             this.model.pathToData());
                     //populate dropdown box
                     this.populateDropdownBox(videoFolder);
@@ -81,7 +76,8 @@ public final class NewSessionController1 implements NewSessionController {
                     //find videos for that class
                     String selectedClass = this.view.getSelectedClass();
                     String[] classPath = { selectedClass };
-                    videoFolder = this.getSubFolder(videoFolder, classPath);
+                    videoFolder = BoxHelper.getSubFolder(videoFolder,
+                            classPath);
                     //add each video to the view
                     this.addVideosToView(videoFolder);
                     if (this.DEBUG) {
@@ -92,14 +88,14 @@ public final class NewSessionController1 implements NewSessionController {
                     System.out.print("Could not find path to "
                             + this.model.pathToData().toString());
                     //Close the window
-                    this.view.closeWindow();
+                    this.view.disposeFrame();
                 }
             } else {
                 //couldnt find the path
                 System.out.print("Could not find path to "
                         + this.model.pathToVideos().toString());
                 //Close the window
-                this.view.closeWindow();
+                this.view.disposeFrame();
             }
 
         } else {
@@ -107,7 +103,7 @@ public final class NewSessionController1 implements NewSessionController {
             System.out.print("Could not find path to "
                     + this.model.pathToYOLO().toString());
             //Close the window
-            this.view.closeWindow();
+            this.view.disposeFrame();
         }
     }
 
@@ -118,13 +114,18 @@ public final class NewSessionController1 implements NewSessionController {
      * @param videoFolder
      */
     private void addVideosToView(BoxFolder videoFolder) {
+        //download the video pfile
+        BoxHelper.getVideoPFile(this.model.api(), this.view.getSelectedClass());
         BoxAPIConnection api = this.model.api();
         Iterator<Info> it = videoFolder.getChildren().iterator();
         while (it.hasNext()) {
             Info info = it.next();
             if (info instanceof BoxFile.Info) {
-                BoxFile file = new BoxFile(api, info.getID());
-                this.addVideoToView(file);
+                //if it is not a pfile
+                if (info.getName().indexOf("pfile") < 0) {
+                    BoxFile file = new BoxFile(api, info.getID());
+                    this.addVideoToView(file);
+                }
             }
         }
     }
@@ -147,25 +148,13 @@ public final class NewSessionController1 implements NewSessionController {
         String name = file.getInfo().getName();
         //add the video
         try {
-            for (int i = 1; i <= 10; i++) {
-                InputStream bais = new ByteArrayInputStream(thumbnail);
-                java.awt.Color c = this.model.getColorNeutral();
-                this.view.addVideo(ImageIO.read(bais), name, true, c);
-            }
+            InputStream bais = new ByteArrayInputStream(thumbnail);
+            java.awt.Color c = this.model.getColorNeutral();
+            boolean inColor = !FileHelper.hasVideoBeenDone(name);
+            this.view.addVideo(ImageIO.read(bais), name, inColor, c);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Checks if the file has already been done.
-     *
-     * @param file
-     * @return false if the video has not been done and true otherwise
-     */
-    private Boolean hasVideoBeenDone(BoxFile file) {
-        //TODO: fill in method
-        return false;
     }
 
     @Override
@@ -178,27 +167,34 @@ public final class NewSessionController1 implements NewSessionController {
          * download the video
          */
         //get the directory the program was launched in
-        String videoDirectory = this.buildLocalUrl();
+        String videoDirectory = FileHelper.userVideoUrl();
 
         File videoFile = new File(
                 videoDirectory + this.model.getNameOfSelectedVideo());
         //build the path to the file
         videoFile.getParentFile().mkdirs();
         //create the file
-        this.createFile(videoFile);
+        FileHelper.createFile(videoFile);
 
         BoxAPIConnection api = this.model.api();
         BoxFolder boxVideoFolder = BoxFolder.getRootFolder(api);
-        boxVideoFolder = this.getSubFolder(boxVideoFolder,
+        boxVideoFolder = BoxHelper.getSubFolder(boxVideoFolder,
                 this.model.pathToYOLO());
-        boxVideoFolder = this.getSubFolder(boxVideoFolder,
+        boxVideoFolder = BoxHelper.getSubFolder(boxVideoFolder,
                 this.model.pathToVideos());
         String selectedClass = this.view.getSelectedClass();
         String[] classPath = { selectedClass };
-        boxVideoFolder = this.getSubFolder(boxVideoFolder, classPath);
+        boxVideoFolder = BoxHelper.getSubFolder(boxVideoFolder, classPath);
 
-        this.DownloadFile(api, boxVideoFolder,
-                this.model.getNameOfSelectedVideo(), videoDirectory);
+        try {
+            this.DownloadFile(api, boxVideoFolder,
+                    this.model.getNameOfSelectedVideo(), videoDirectory);
+        } catch (InvocationTargetException | IOException
+                | InterruptedException e) {
+            System.err.println("Error occured trying to download: "
+                    + this.model.getNameOfSelectedVideo());
+            e.printStackTrace();
+        }
 
         this.loadNextWindow(videoFile);
     }
@@ -222,123 +218,6 @@ public final class NewSessionController1 implements NewSessionController {
     }
 
     /**
-     * Creates folders on the local machine that are not yet created and then
-     * creates the file if needed.
-     *
-     * @param videoFileUrl
-     */
-    private void createFile(File videoFile) {
-        if (!videoFile.exists()) {
-            try {
-                videoFile.createNewFile();
-            } catch (IOException e) {
-                System.err.println("Error creating local file");
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Builds a string for the absolute path to where the file will be
-     * downloaded to.
-     *
-     * @return the string that was built
-     */
-    private String buildLocalUrl() {
-        String videoFileUrl = "";
-        try {
-            videoFileUrl = YOLOBboxController1.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI().getPath().toString();
-            //get rid of the executable at the end
-            videoFileUrl = videoFileUrl.substring(0,
-                    videoFileUrl.lastIndexOf("/") + 1);
-            //add the name of the folder to put the file in
-            videoFileUrl += Config.local_video_folder_name + "/";
-        } catch (URISyntaxException e) {
-            System.err.println("Error getting the location of the program");
-            e.printStackTrace();
-        }
-        return videoFileUrl;
-    }
-
-    /**
-     * checks if the path exists in the current folder and returns true if it
-     * does and false otherwise
-     *
-     * @param folder
-     * @param path
-     * @return true if the sub folder is found
-     */
-    private boolean pathExists(BoxFolder folder, String[] path) {
-        int i = 0;
-        Boolean folderFound = true;
-        while (i < path.length && folderFound) {
-            Iterator<Info> it = folder.getChildren().iterator();
-            folderFound = false;
-            while (!folderFound && it.hasNext()) {
-                Info info = it.next();
-                if (this.DEBUG) {
-                    System.out.println("Next item: " + info.getName());
-                    System.out.println("Matching to: " + path[i]);
-                }
-                if (info.getName().equals(path[i])) {
-                    folderFound = true;
-                    folder = (BoxFolder) info.getResource();
-                }
-                if (this.DEBUG) {
-                    System.out.println("Matched?: " + folderFound);
-                }
-            }
-            i++;
-        }
-        System.out.println(folder.toString());
-        if (folderFound) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * Returns the folder at the end of the given path. Make sure the path
-     * exists first with pathExists()
-     *
-     * @param folder
-     *            the root folder where the path starts at
-     * @param path
-     *            an array of folder names that make the path to find the
-     *            subfolder. do not include things like "\" separators
-     * @return the subfolder
-     */
-    private BoxFolder getSubFolder(BoxFolder folder, String[] path) {
-        int i = 0;
-        Boolean folderFound = true;
-        while (i < path.length && folderFound) {
-            Iterator<Info> it = folder.getChildren().iterator();
-            folderFound = false;
-            while (!folderFound && it.hasNext()) {
-                Info info = it.next();
-                if (this.DEBUG) {
-                    System.out.println("Next item: " + info.getName());
-                    System.out.println("Matching to: " + path[i]);
-                }
-                if (info.getName().equals(path[i])) {
-                    folderFound = true;
-                    folder = (BoxFolder) info.getResource();
-                }
-                if (this.DEBUG) {
-                    System.out.println("Matched: " + folderFound);
-                }
-            }
-            i++;
-        }
-        if (this.DEBUG) {
-            System.out.println(folder.toString());
-        }
-        return folder;
-    }
-
-    /**
      * Downloads the file with the name {fileName} in the first level of
      * {folder} and puts it in the location on the local machine given by {url}.
      * The {api} is needed to have access to box.
@@ -347,10 +226,14 @@ public final class NewSessionController1 implements NewSessionController {
      * @param folder
      * @param fileName
      * @param url
-     *            Can be relative or absolute but should end with "/"
+     *            Can be relative or absolute but end end with "/"
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws InvocationTargetException
      */
     private void DownloadFile(BoxAPIConnection api, BoxFolder folder,
-            String fileName, String url) {
+            String fileName, String url) throws IOException,
+            InvocationTargetException, InterruptedException {
         System.out.println("Attempting to download: " + fileName);
         Iterator<Info> it = folder.getChildren().iterator();
         while (it.hasNext()) {
@@ -363,98 +246,80 @@ public final class NewSessionController1 implements NewSessionController {
                 //download the file and put it in the output stream
 
                 FileOutputStream os;
-                try {
-                    os = new FileOutputStream(url + file.getInfo().getName());
+                os = new FileOutputStream(url + file.getInfo().getName());
 
-                    //change the gui to show a progress bar
-                    System.out
-                            .println("File Size: " + file.getInfo().getSize());
-                    this.view.changeToProgressBar(file.getInfo().getSize());
-                    System.out.println("Downloading File");
-                    class DownloadTask implements Runnable {
-                        FileOutputStream os;
-                        ProgressListener pl;
+                //change the gui to show a progress bar
+                System.out.println("File Size: " + file.getInfo().getSize());
+                this.view.changeToProgressBar(file.getInfo().getSize());
+                System.out.println("Downloading File");
+                class DownloadTask implements Runnable {
+                    FileOutputStream os;
+                    ProgressListener pl;
 
-                        public DownloadTask(FileOutputStream os,
-                                ProgressListener pl) {
-                            this.os = os;
-                            this.pl = pl;
-                        }
-
-                        @Override
-                        public void run() {
-                            file.download(this.os, this.pl);
-                        }
-
+                    public DownloadTask(FileOutputStream os,
+                            ProgressListener pl) {
+                        this.os = os;
+                        this.pl = pl;
                     }
 
-                    class ProgressListener
-                            implements com.box.sdk.ProgressListener {
+                    @Override
+                    public void run() {
+                        file.download(this.os, this.pl);
+                    }
 
-                        private NewSessionView view;
-                        private int count;
+                }
 
-                        //Constructor
-                        ProgressListener(NewSessionView view) {
-                            this.view = view;
+                class ProgressListener implements com.box.sdk.ProgressListener {
+
+                    private NewSessionView view;
+                    private int count;
+
+                    //Constructor
+                    ProgressListener(NewSessionView view) {
+                        this.view = view;
+                        this.count = 0;
+                    }
+
+                    @Override
+                    public void onProgressChanged(long numBytes,
+                            long totalBytes) {
+                        double percentComplete = numBytes / totalBytes * 100;
+
+                        this.count++;
+                        if (this.count > 100) {
                             this.count = 0;
-                        }
+                            System.out.println("Current Bytes: " + numBytes);
+                            //System.out.println("Total Bytes: " + totalBytes);
+                            //System.out.println("Downloaded " + percentComplete + "%");
+                            class SetProgressTask implements Runnable {
+                                private NewSessionView view;
 
-                        @Override
-                        public void onProgressChanged(long numBytes,
-                                long totalBytes) {
-                            double percentComplete = numBytes / totalBytes
-                                    * 100;
+                                public SetProgressTask(NewSessionView view) {
+                                    this.view = view;
+                                }
 
-                            this.count++;
-                            if (this.count > 100) {
-                                this.count = 0;
-                                System.out
-                                        .println("Current Bytes: " + numBytes);
-                                //System.out.println("Total Bytes: " + totalBytes);
-                                //System.out.println("Downloaded " + percentComplete + "%");
-                                class SetProgressTask implements Runnable {
-                                    private NewSessionView view;
-
-                                    public SetProgressTask(
-                                            NewSessionView view) {
-                                        this.view = view;
-                                    }
-
-                                    @Override
-                                    public void run() {
-                                        System.out
-                                                .println("Try to set progress");
-                                        this.view.setProgress(numBytes);
-
-                                    }
+                                @Override
+                                public void run() {
+                                    System.out.println("Try to set progress");
+                                    this.view.setProgress(numBytes);
 
                                 }
-                                SwingUtilities.invokeLater(
-                                        new SetProgressTask(this.view));
-                            }
-                        }
-                    }
 
-                    try {
-                        if (SwingUtilities.isEventDispatchThread()) {
-                            file.download(os, new ProgressListener(this.view));
-                        } else {
-                            SwingUtilities.invokeAndWait(new DownloadTask(os,
-                                    new ProgressListener(this.view)));
+                            }
+                            SwingUtilities.invokeLater(
+                                    new SetProgressTask(this.view));
                         }
-                    } catch (InvocationTargetException
-                            | InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
                     }
-                    System.out.println("Download Complete");
-                    os.close();
-                } catch (IOException e) {
-                    System.err.println(
-                            "Error occured trying to download: " + fileName);
-                    e.printStackTrace();
                 }
+
+                if (SwingUtilities.isEventDispatchThread()) {
+                    file.download(os, new ProgressListener(this.view));
+                } else {
+                    SwingUtilities.invokeAndWait(new DownloadTask(os,
+                            new ProgressListener(this.view)));
+                }
+                System.out.println("Download Complete");
+                os.close();
             }
         }
     }
@@ -485,13 +350,6 @@ public final class NewSessionController1 implements NewSessionController {
         this.view.addListenerToComboBox();
     }
 
-    private static void listFolder(BoxFolder folder) {
-        System.out.println("Printing files");
-        for (BoxItem.Info itemInfo : folder) {
-            System.out.println(itemInfo.getName());
-        }
-    }
-
     @Override
     public void processPanelSelect(JPanel jpanel) {
         //change the previously selected panel, if there is one,
@@ -518,12 +376,14 @@ public final class NewSessionController1 implements NewSessionController {
          */
         BoxAPIConnection api = this.model.api();
         BoxFolder videoFolder = BoxFolder.getRootFolder(api);
-        videoFolder = this.getSubFolder(videoFolder, this.model.pathToYOLO());
-        videoFolder = this.getSubFolder(videoFolder, this.model.pathToVideos());
+        videoFolder = BoxHelper.getSubFolder(videoFolder,
+                this.model.pathToYOLO());
+        videoFolder = BoxHelper.getSubFolder(videoFolder,
+                this.model.pathToVideos());
         //find videos for that class
         String selectedClass = this.view.getSelectedClass();
         String[] classPath = { selectedClass };
-        videoFolder = this.getSubFolder(videoFolder, classPath);
+        videoFolder = BoxHelper.getSubFolder(videoFolder, classPath);
         //add each video to the view
         this.addVideosToView(videoFolder);
         this.model.setNameOfSelectedVideo("");

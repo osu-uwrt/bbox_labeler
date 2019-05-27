@@ -38,14 +38,9 @@ public final class NewSessionModel1 implements NewSessionModel {
          */
         this.api = api;
         this.videoList = new LinkedList<JPanel>();
-        this.pathToYOLO = new String[3];
-        this.pathToYOLO[0] = "The Underwater Robotics Team";
-        this.pathToYOLO[1] = "Software";
-        this.pathToYOLO[2] = "YOLO";
-        this.pathToData = new String[1];
-        this.pathToData[0] = "Training Data";
-        this.pathToVideos = new String[1];
-        this.pathToVideos[0] = "Raw";
+        this.pathToYOLO = Config.path_to_yolo;
+        this.pathToData = Config.path_to_data;
+        this.pathToVideos = Config.path_to_videos;
         this.nameOfSelectedVideo = "";
         this.RGBNeutral = new int[3];
         this.RGBNeutral[0] = 1;

@@ -25,8 +25,6 @@ public interface NewSessionView extends ActionListener {
 
     public void addDropdownItem(String text);
 
-    public void closeWindow();
-
     public void addVideo(BufferedImage video, String text, Boolean inColor,
             Color color);
 
@@ -47,4 +45,6 @@ public interface NewSessionView extends ActionListener {
     public void progress(long progress);
 
     public com.box.sdk.ProgressListener getProgressListener();
+
+    public void disposeFrame();
 }

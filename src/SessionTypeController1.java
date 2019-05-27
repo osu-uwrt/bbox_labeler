@@ -60,10 +60,12 @@ public final class SessionTypeController1 implements SessionTypeController {
                         model, view);
                 view.registerObserver(controller);
                 //TODO Close this window
+
             }
 
         }
         SwingUtilities.invokeLater(new myTask(this.model.api()));
+        this.view.disposeFrame();
     }
 
     @Override

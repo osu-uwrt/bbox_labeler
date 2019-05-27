@@ -1,7 +1,5 @@
-import static spark.Spark.get;
-
 public class HelloWorld {
     public static void main(String[] args) {
-        get("/hello", (req, res) -> "Hello World");
+        //Total lines of code as of 5/26/2019: 4337
     }
 }

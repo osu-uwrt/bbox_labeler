@@ -24,12 +24,6 @@ public interface YOLOBboxController {
     void processResetEvent();
 
     /**
-     * Processes event to browse for the location of a video file and insert the
-     * location into the corresponding textbox.
-     */
-    void processBrowseVideoLocationEvent();
-
-    /**
      * Creates txt and image files for every frame with a BBox, zips up the
      * folder, and uploads it to box.
      */

@@ -110,7 +110,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
          * Call the JFrame (superclass) constructor with a String parameter to
          * name the window in its title bar
          */
-        super("Begin New Session");
+        super("Scylla");
 
         videoPanels = new LinkedList<JPanel>();
         this.count = COLUMNS_IN_VIDEO_PANEL;

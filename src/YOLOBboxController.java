@@ -56,6 +56,11 @@ public interface YOLOBboxController {
     void processFramesForwardEvent();
 
     /**
+     * Saves the bbox data from the current session to the saves folder.
+     */
+    void processSaveEvent();
+
+    /**
      * Refactors the window based on the new size of the window
      */
     void processResizeEvent();

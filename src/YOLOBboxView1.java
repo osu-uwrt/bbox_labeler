@@ -38,7 +38,7 @@ public final class YOLOBboxView1 extends JFrame
      * GUI widgets that need to be in scope in actionPerformed method, and
      * related constants.
      */
-    private static final int COLUMNS_IN_FRAME_CONTROL_PANEL_GRID = 5,
+    private static final int COLUMNS_IN_FRAME_CONTROL_PANEL_GRID = 6,
             ROWS_IN_FRAME_CONTROL_PANEL_GRID = 2,
             DEFAULT_WIDTH_OF_WINDOW = 1000, DEFAULT_HEIGHT_OF_WINDOW = 700,
             BUTTON_PANEL_HEIGHT = 130;
@@ -58,7 +58,7 @@ public final class YOLOBboxView1 extends JFrame
      * Buttons.
      */
     private final JButton reviewButton, fillInFramesButton, resetButton,
-            framesBackButton, framesForwardButton, exportButton;
+            framesBackButton, framesForwardButton, exportButton, saveButton;
 
     /**
      * Labels
@@ -97,6 +97,7 @@ public final class YOLOBboxView1 extends JFrame
         this.exportButton = new JButton("Export");
         this.framesBackButton = new JButton("Back");
         this.framesForwardButton = new JButton("Forward");
+        this.saveButton = new JButton("Save");
         this.totalFramesLabel = new JLabel("Number of frames:");
         this.frameNumberLabel = new JLabel("Current frame:");
         this.imageLabel = new JLabel();
@@ -124,12 +125,14 @@ public final class YOLOBboxView1 extends JFrame
          * top to bottom
          */
         //First row
+        this.frameControlPanel.add(new JLabel());
         this.frameControlPanel.add(this.resetButton);
         this.frameControlPanel.add(this.fillInFramesButton);
         this.frameControlPanel.add(this.frameRateLabel);
         this.frameControlPanel.add(this.frameNumberLabel);
         this.frameControlPanel.add(this.totalFramesLabel);
         //Second row
+        this.frameControlPanel.add(this.saveButton);
         this.frameControlPanel.add(this.reviewButton);
         this.frameControlPanel.add(this.exportButton);
         this.frameControlPanel.add(this.framesBackButton);
@@ -184,6 +187,7 @@ public final class YOLOBboxView1 extends JFrame
         this.imageLabel.addMouseListener(this);
         this.imageLabel.addMouseMotionListener(this);
         this.fillInFramesButton.addActionListener(this);
+        this.saveButton.addActionListener(this);
 
         // Start the main application window --------------------------------
 
@@ -327,6 +331,10 @@ public final class YOLOBboxView1 extends JFrame
         } else if (source == this.framesForwardButton) {
             this.toggleButtons();
             this.controller.processFramesForwardEvent();
+            this.toggleButtons();
+        } else if (source == this.saveButton) {
+            this.toggleButtons();
+
             this.toggleButtons();
         } else {
             System.out.println("How?");

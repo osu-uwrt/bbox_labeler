@@ -57,7 +57,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     private final YOLOBboxView view;
 
     /**
-     * Timer for quickly cycling through frames Is not currently used
+     * Timer for quickly cycling through frames. Is not currently used
      */
     private Timer timer;
 
@@ -628,6 +628,29 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect changes in model
          */
         this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void processSaveEvent() {
+        /*
+         * Save format: {frame index} {BBox}
+         */
+        File saveFile = new File(FileHelper.userSaveUrl()
+                + this.model.file().getName() + ".txt");
+        List<BBox> bbox = this.model.bbox();
+        try {
+            BufferedWriter writer = new BufferedWriter(
+                    new FileWriter(saveFile));
+            for (int i = 0; i < bbox.size(); i++) {
+                writer.write(
+                        i + " " + bbox.toString() + System.lineSeparator());
+
+            }
+            writer.close();
+        } catch (IOException e) {
+            System.err.println("Problem Saving Session Data");
+            e.printStackTrace();
+        }
     }
 
     @Override

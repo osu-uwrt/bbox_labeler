@@ -7,6 +7,18 @@ import java.net.URISyntaxException;
 public class FileHelper {
 
     /**
+     * Builds a string for the absolute path in the user's program folder where
+     * the file will be downloaded to.
+     *
+     * @return the path of the directory to put the video in
+     */
+    public static String userSaveUrl() {
+        return System.getProperty("user.home") + File.separator + "Scylla"
+                + File.separator + Config.local_save_folder_name
+                + File.separator;
+    }
+
+    /**
      * Checks if the file has already been done.
      *
      * @param file

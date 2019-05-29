@@ -200,6 +200,7 @@ public final class YOLOBboxView1 extends JFrame
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setBounds(30, 30, DEFAULT_WIDTH_OF_WINDOW,
                 DEFAULT_HEIGHT_OF_WINDOW);
+        this.setIconImage(new ImageIcon("data/Scylla.jpg").getImage());
         this.setVisible(true);
 
     }

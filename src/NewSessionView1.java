@@ -202,6 +202,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         this.setBounds(dim.width / 2 - this.getSize().width / 2,
                 dim.height / 2 - this.getSize().height / 2,
                 DEFAULT_WIDTH_OF_WINDOW, DEFAULT_HEIGHT_OF_WINDOW);
+        this.setIconImage(new ImageIcon("data/Scylla.jpg").getImage());
         this.setVisible(true);
 
     }

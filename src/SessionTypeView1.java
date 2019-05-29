@@ -5,6 +5,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.io.File;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -126,6 +127,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.setBounds(dim.width / 2 - this.getSize().width / 2,
                 dim.height / 2 - this.getSize().height / 2,
                 DEFAULT_WIDTH_OF_WINDOW, DEFAULT_HEIGHT_OF_WINDOW);
+        this.setIconImage(new ImageIcon("data/Scylla.jpg").getImage());
         this.setVisible(true);
 
     }

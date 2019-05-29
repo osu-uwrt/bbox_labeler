@@ -8,6 +8,7 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
@@ -19,6 +20,7 @@ public class LoginGUI3 extends Application {
 
     @Override
     public void start(final Stage stage) {
+        stage.getIcons().add(new Image("Scylla.jpg"));
         // Create the WebView
         WebView webView = new WebView();
 

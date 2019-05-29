@@ -3,8 +3,10 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.io.File;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -35,7 +37,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
     /**
      * Buttons.
      */
-    private final JButton newButton, loadButton;
+    private final JButton newButton, loadButton, startButton;
 
     /**
      * Labels
@@ -43,6 +45,11 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
     private final JLabel welcomeLabel;
     private final JPanel buttonPanel;
     private final JSplitPane splitMain;
+
+    /**
+     * JComboBox
+     */
+    private final JComboBox<String> loadComboBox;
 
     /**
      * No-argument constructor.
@@ -63,8 +70,10 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
          */
         this.newButton = new JButton("Begin New Session");
         this.loadButton = new JButton("Load Previous Session");
+        this.startButton = new JButton("Resume Labelling");
         this.welcomeLabel = new JLabel(
                 "<html>Welcome, {User}<br>What would you like to do?</html>");
+        this.loadComboBox = new JComboBox<String>();
 
         this.splitMain = new JSplitPane();
         //this.splitMain.setDividerSize(1);
@@ -74,6 +83,8 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.splitMain.setOrientation(JSplitPane.VERTICAL_SPLIT);
         this.buttonPanel = new JPanel(new GridLayout(ROWS_IN_BUTTON_PANEL_GRID,
                 COLUMNS_IN_BUTTON_PANEL_GRID));
+        this.loadComboBox.setEnabled(false);
+        this.fillInLoadComboBox();
 
         /*
          * Organize main window using grid layout
@@ -100,6 +111,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
          */
         this.newButton.addActionListener(this);
         this.loadButton.addActionListener(this);
+        this.startButton.addActionListener(this);
 
         // Start the main application window --------------------------------
 
@@ -116,6 +128,17 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
                 DEFAULT_WIDTH_OF_WINDOW, DEFAULT_HEIGHT_OF_WINDOW);
         this.setVisible(true);
 
+    }
+
+    private void fillInLoadComboBox() {
+        //load a list of videos
+        File videoFolder = new File(FileHelper.userVideoUrl());
+        videoFolder.mkdirs();
+        File[] videoFiles = videoFolder.listFiles();
+        //add the name of each video
+        for (int i = 0; i < videoFiles.length; i++) {
+            this.loadComboBox.addItem(videoFiles[i].getName());
+        }
     }
 
     /**
@@ -157,7 +180,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
          */
 
         Object source = event.getSource();
-
+        //TODO: Add startButton Code
         if (source == this.newButton) {
             this.toggleButtons();
             this.controller.processNewEvent();
@@ -166,6 +189,11 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
             this.toggleButtons();
             this.controller.processLoadEvent();
             this.toggleButtons();
+        } else if (source == this.startButton) {
+            this.toggleButtons();
+            this.controller.processStartEvent();
+            this.toggleButtons();
+
         } else {
             System.out.println("How?");
         }
@@ -184,5 +212,19 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
     @Override
     public void disposeFrame() {
         this.dispose();
+    }
+
+    @Override
+    public void swapToLoadView() {
+        this.buttonPanel.removeAll();
+        this.buttonPanel.add(this.loadComboBox);
+        this.buttonPanel.add(this.startButton);
+        this.revalidate();
+        this.repaint();
+    }
+
+    @Override
+    public String getSelectedVideo() {
+        return (String) this.loadComboBox.getSelectedItem();
     }
 }

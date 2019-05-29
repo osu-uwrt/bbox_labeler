@@ -21,4 +21,8 @@ public interface SessionTypeView extends ActionListener {
     public void setWelcomeLabel(String text);
 
     public void disposeFrame();
+
+    public void swapToLoadView();
+
+    public String getSelectedVideo();
 }

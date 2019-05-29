@@ -245,13 +245,10 @@ public class BoxHelper {
             folderFound = false;
             while (!folderFound && it.hasNext()) {
                 Info info = it.next();
-                System.out.println("Next item: " + info.getName());
-                System.out.println("Matching to: " + path[i]);
                 if (info.getName().equals(path[i])) {
                     folderFound = true;
                     folder = (BoxFolder) info.getResource();
                 }
-                System.out.println("Matched: " + folderFound);
             }
             i++;
         }

@@ -263,7 +263,6 @@ public final class YOLOBboxView1 extends JFrame
 
     @Override
     public void loadFrame(BufferedImage img) {
-        System.out.println("Image Loaded");
         ImageIcon icon = new ImageIcon(img);
         this.imageLabel.setIcon(icon);
     }
@@ -334,7 +333,7 @@ public final class YOLOBboxView1 extends JFrame
             this.toggleButtons();
         } else if (source == this.saveButton) {
             this.toggleButtons();
-
+            this.controller.processSaveEvent();
             this.toggleButtons();
         } else {
             System.out.println("How?");

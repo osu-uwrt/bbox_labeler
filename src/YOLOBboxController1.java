@@ -140,14 +140,13 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                 this.model.setFrameRate((int) frameGrabber.getFrameRate());
                 this.model
                         .setTotalFrames(frameGrabber.getLengthInVideoFrames());
-
             }
             frameGrabber.stop();
 
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
 
         } catch (IOException e) {
-            System.out.println("Trouble Loading File");
+            System.out.println("Trouble Loading Video");
         }
     }
 
@@ -344,6 +343,11 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             //delete video
             File videoFile = this.model.file();
             videoFile.delete();
+            File saveFile = new File(
+                    FileHelper.userSaveUrl() + videoFile.getName() + ".txt");
+            if (saveFile.exists()) {
+                saveFile.delete();
+            }
         }
     }
 
@@ -561,9 +565,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             }
             f = frameGrabber.grabImage();
             Java2DFrameConverter j = new Java2DFrameConverter();
-            System.out.println(f);
             BufferedImage bi = j.convert(f);
-            System.out.println(bi);
             this.model.setMaster(bi);
             BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
             this.model.setScaled(scaled);
@@ -609,9 +611,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             }
             f = frameGrabber.grabImage();
             Java2DFrameConverter j = new Java2DFrameConverter();
-            System.out.println(f);
             BufferedImage bi = j.convert(f);
-            System.out.println(bi);
             this.model.setMaster(bi);
             BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
             this.model.setScaled(scaled);
@@ -637,13 +637,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          */
         File saveFile = new File(FileHelper.userSaveUrl()
                 + this.model.file().getName() + ".txt");
+        saveFile.getParentFile().mkdirs();
         List<BBox> bbox = this.model.bbox();
         try {
             BufferedWriter writer = new BufferedWriter(
                     new FileWriter(saveFile));
+            writer.write(this.model.className() + System.lineSeparator());
             for (int i = 0; i < bbox.size(); i++) {
-                writer.write(
-                        i + " " + bbox.toString() + System.lineSeparator());
+                writer.write(i + " " + bbox.get(i).toString()
+                        + System.lineSeparator());
 
             }
             writer.close();
@@ -686,18 +688,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         }
         //set the data where it needs to be
         bbox.set(this.model.currentFrame(), temp);
-        //Print out the list
-        System.out.println("Frame: " + this.model.currentFrame());
-        int i = 0;
-        while (i < bbox.size()) {
-            if (bbox.get(i).x1() + bbox.get(i).x2() + bbox.get(i).y1()
-                    + bbox.get(i).y2() > 0.00001) {
-                System.out.println("Frame " + i + ": " + bbox.get(i).x1() + ","
-                        + bbox.get(i).y1() + " " + bbox.get(i).x2() + ","
-                        + bbox.get(i).y2());
-            }
-            i++;
-        }
         BufferedImage lines = deepCopy(this.model.scaled());
         this.redrawLines(lines,
                 this.model.bbox().get(this.model.currentFrame()));
@@ -1016,10 +1006,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         g.drawLine(x, 0, x, image.getHeight());
         y = (int) (bbox.y2() * image.getHeight());
         g.drawLine(0, y, image.getWidth(), y);
-        //Print out the list
-        System.out.println("Frame: ?");
-        System.out.println("Frame ?: " + bbox.x1() + "," + bbox.y1() + " "
-                + bbox.x2() + "," + bbox.y2());
         //draw lines for cursor
         if (this.model.lastKnownX() >= 0.0 && this.model.lastKnownY() >= 0) {
             drawCrosshairs(image,

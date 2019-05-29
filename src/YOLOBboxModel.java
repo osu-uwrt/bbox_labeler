@@ -1,6 +1,7 @@
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -85,5 +86,7 @@ public interface YOLOBboxModel {
     String videoName();
 
     void setVideoName(String videoName);
+
+    void loadData() throws NumberFormatException, IOException;
 
 }

@@ -798,8 +798,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         List<BBox> bbox = this.model.bbox();
 
         //get the first frame with a bounding box
-        while (i < bbox.size() && (bbox.get(i).x1() < 0 || bbox.get(i).y1() < 0
-                || bbox.get(i).x2() < 0 || bbox.get(i).y2() < 0)) {
+        while (i < bbox.size() && !(bbox.get(i).isSet())) {
             i++;
         }
         //if one was found
@@ -808,9 +807,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             int firstIndex = i;
             //get the last frame with a bounding box
             i = bbox.size() - 1;
-            while (i > firstIndex
-                    && (bbox.get(i).x1() < 0 || bbox.get(i).y1() < 0
-                            || bbox.get(i).x2() < 0 || bbox.get(i).y2() < 0)) {
+            while (i > firstIndex && !(bbox.get(i).isSet())) {
                 i--;
             }
             //if one other than the first one was found
@@ -821,9 +818,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
                     //get the next frame after the first with a bounding box
                     i = firstIndex + 1;
-                    while (i < bbox.size() && (bbox.get(i).x1() < 0
-                            || bbox.get(i).y1() < 0 || bbox.get(i).x2() < 0
-                            || bbox.get(i).y2() < 0)) {
+                    while (i < bbox.size() && !(bbox.get(i).isSet())) {
                         i++;
                     }
                     BBox next = bbox.get(i);
@@ -880,7 +875,6 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         } else {
             //no bboxes were set
         }
-        System.out.println("CV Proccessed");
     }
 
     /**

@@ -148,7 +148,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
             Matcher matcher = pattern.matcher(text);
             matcher.find();
             int index = Integer.parseInt(matcher.group());
-            regex = "([0-9]+[.][0-9]+)";
+            regex = "(-?[0-9]+[.][0-9]+)";
             pattern = Pattern.compile(regex);
             matcher = pattern.matcher(text);
             matcher.find();

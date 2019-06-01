@@ -75,4 +75,8 @@ public class BBox {
     public String toString() {
         return this.x1 + " " + this.y1 + " " + this.x2 + " " + this.y2;
     }
+
+    public boolean isSet() {
+        return this.x1 > 0 || this.x2 > 0 || this.y1 > 0 || this.y2 > 0;
+    }
 }

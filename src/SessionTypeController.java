@@ -28,4 +28,10 @@ public interface SessionTypeController {
      */
     void processLoadEvent();
 
+    /**
+     * Loads the video into the bbox labeller and imports data from the
+     * corresponding save file.
+     */
+    void processStartEvent();
+
 }

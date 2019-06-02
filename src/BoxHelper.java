@@ -17,6 +17,74 @@ import com.box.sdk.BoxItem.Info;
 public class BoxHelper {
 
     /**
+     * Downloads the pfile from the data folder on box. Returns true if it was
+     * successfully downloaded and false if it wasn't.
+     *
+     * @return
+     */
+    public static boolean getValidationFile(BoxAPIConnection api,
+            String validationFileName) {
+
+        //download the pfile
+        //Get the folder in box where the pfile is at
+        BoxFolder classFolder = BoxFolder.getRootFolder(api);
+        //to the yolo folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_yolo);
+        //to the data folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_data);
+        if (BoxHelper.fileExists(classFolder, validationFileName)) {
+            //download it
+            try {
+                BoxHelper.DownloadFile(api, classFolder, validationFileName,
+                        FileHelper.userProgramUrl());
+            } catch (InvocationTargetException | IOException
+                    | InterruptedException e) {
+                System.err
+                        .println("Error occured trying to download: pfile.txt");
+                e.printStackTrace();
+                return false;
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Downloads the pfile from the data folder on box. Returns true if it was
+     * successfully downloaded and false if it wasn't.
+     *
+     * @return
+     */
+    public static boolean getTrainingFile(BoxAPIConnection api,
+            String trainingFileName) {
+
+        //download the pfile
+        //Get the folder in box where the pfile is at
+        BoxFolder classFolder = BoxFolder.getRootFolder(api);
+        //to the yolo folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_yolo);
+        //to the data folder
+        classFolder = BoxHelper.getSubFolder(classFolder, Config.path_to_data);
+        if (BoxHelper.fileExists(classFolder, trainingFileName)) {
+            //download it
+            try {
+                BoxHelper.DownloadFile(api, classFolder, trainingFileName,
+                        FileHelper.userProgramUrl());
+            } catch (InvocationTargetException | IOException
+                    | InterruptedException e) {
+                System.err
+                        .println("Error occured trying to download: pfile.txt");
+                e.printStackTrace();
+                return false;
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Downloads the file with the name {fileName} in the first level of
      * {folder} and puts it in the location on the local machine given by {url}.
      * The {api} is needed to have access to box.
@@ -245,13 +313,10 @@ public class BoxHelper {
             folderFound = false;
             while (!folderFound && it.hasNext()) {
                 Info info = it.next();
-                System.out.println("Next item: " + info.getName());
-                System.out.println("Matching to: " + path[i]);
                 if (info.getName().equals(path[i])) {
                     folderFound = true;
                     folder = (BoxFolder) info.getResource();
                 }
-                System.out.println("Matched: " + folderFound);
             }
             i++;
         }

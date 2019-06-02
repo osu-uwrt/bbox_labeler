@@ -1,9 +1,13 @@
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -36,46 +40,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private BoxAPIConnection api; //Connection to Box
     private String className, videoName;
 
-    /**
-     * Default constructor.
-     */
-    public YOLOBboxModel1() {
-        /*
-         * Initialize model
-         */
-        this.videoLocation = "";//File location of the video
-        this.itemIndex = 0;//index of the item being identified
-        this.currentFrame = 0;//the index of the frame that is being shown
-        this.frameRate = 0;//the frame rate of the given video
-        this.frameJump = 2;//the number of frames to jump forward or backward
-        this.bbox = new LinkedList<BBox>();//holds the bbox values for each frame
-        this.bbox.add(new BBox());
-        this.totalFrames = 0;//the total number of frames in the video
-        this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
-        this.file = new File("");//the video file
-        //used to grab individual frames from the video
-        this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
-        try {
-            //the untouched version of a frame
-            this.master = ImageIO.read(new File("data/default.png"));
-        } catch (IOException e) {
-            System.out.println("Default image not found");
-            this.master = new BufferedImage(200, 200,
-                    BufferedImage.TYPE_INT_RGB);
-        }
-        //the scaled version of a frame
-        this.scaled = (BufferedImage) this.master;
-        //the scaled version of a frame with crosshairs drawn on it
-        this.lines = this.scaled;
-        //the height of the video
-        this.videoHeight = this.frameGrabber.getImageHeight();
-        //the width of the video
-        this.videoWidth = this.frameGrabber.getImageWidth();
-        //the last known x-coordinate of the mouse on the video
-        this.lastKnownX = -1.0;
-        //the last known y-coordinate of the mouse on the video
-        this.lastKnownY = -1.0;
-    }
+    private boolean shouldLoadData;
 
     public YOLOBboxModel1(BoxAPIConnection api, String className,
             String videoName, File file) {
@@ -91,7 +56,6 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.frameRate = 0;//the frame rate of the given video
         this.frameJump = 2;//the number of frames to jump forward or backward
         this.bbox = new LinkedList<BBox>();//holds the bbox values for each frame
-        this.bbox.add(new BBox());
         this.totalFrames = 0;//the total number of frames in the video
         this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
         this.file = file;//the video file
@@ -117,6 +81,89 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.lastKnownX = -1.0;
         //the last known y-coordinate of the mouse on the video
         this.lastKnownY = -1.0;
+        this.shouldLoadData = false;
+    }
+
+    public YOLOBboxModel1(BoxAPIConnection api, String videoName, File file) {
+        /*
+         * Initialize model
+         */
+        this.api = api;
+        this.videoName = videoName;
+        File loadFile = new File(
+                FileHelper.userSaveUrl() + this.videoName + ".txt");
+        BufferedReader reader;
+        this.className = "";
+        try {
+            reader = new BufferedReader(new FileReader(loadFile));
+            this.className = reader.readLine();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        this.videoLocation = "";//File location of the video
+        this.itemIndex = 0;//index of the item being identified
+        this.currentFrame = 0;//the index of the frame that is being shown
+        this.frameRate = 0;//the frame rate of the given video
+        this.frameJump = 2;//the number of frames to jump forward or backward
+        this.bbox = new LinkedList<BBox>();//holds the bbox values for each frame
+        this.totalFrames = 0;//the total number of frames in the video
+        this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
+        this.file = file;//the video file
+        //used to grab individual frames from the video
+        this.frameGrabber = new FFmpegFrameGrabber(String.valueOf(this.file));
+        try {
+            //the untouched version of a frame
+            this.master = ImageIO.read(new File("data/default.png"));
+        } catch (IOException e) {
+            System.out.println("Default image not found");
+            this.master = new BufferedImage(200, 200,
+                    BufferedImage.TYPE_INT_RGB);
+        }
+        //the scaled version of a frame
+        this.scaled = (BufferedImage) this.master;
+        //the scaled version of a frame with crosshairs drawn on it
+        this.lines = this.scaled;
+        //the height of the video
+        this.videoHeight = this.frameGrabber.getImageHeight();
+        //the width of the video
+        this.videoWidth = this.frameGrabber.getImageWidth();
+        //the last known x-coordinate of the mouse on the video
+        this.lastKnownX = -1.0;
+        //the last known y-coordinate of the mouse on the video
+        this.lastKnownY = -1.0;
+        this.shouldLoadData = true;
+    }
+
+    @Override
+    public void loadData() throws NumberFormatException, IOException {
+        File loadFile = new File(
+                FileHelper.userSaveUrl() + this.videoName + ".txt");
+        BufferedReader reader = new BufferedReader(new FileReader(loadFile));
+        String text;
+        this.className = reader.readLine();
+        while ((text = reader.readLine()) != null) {
+            System.out.println("Line read: " + text);
+            String regex = "([0-9]+)";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(text);
+            matcher.find();
+            int index = Integer.parseInt(matcher.group());
+            regex = "(-?[0-9]+[.][0-9]+)";
+            pattern = Pattern.compile(regex);
+            matcher = pattern.matcher(text);
+            matcher.find();
+            double firstValue = Double.parseDouble(matcher.group());
+            matcher.find();
+            double secondValue = Double.parseDouble(matcher.group());
+            matcher.find();
+            double thirdValue = Double.parseDouble(matcher.group());
+            matcher.find();
+            double fourthValue = Double.parseDouble(matcher.group());
+            matcher.find();
+            this.bbox.set(index,
+                    new BBox(firstValue, secondValue, thirdValue, fourthValue));
+        }
+        reader.close();
     }
 
     @Override
@@ -175,6 +222,14 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.totalFrames = x;
         while (this.bbox.size() < x) {
             this.bbox.add(new BBox());
+        }
+        if (this.shouldLoadData) {
+            try {
+                this.loadData();
+            } catch (Exception e) {
+                System.err.println("Error loading data");
+                e.printStackTrace();
+            }
         }
 
     }

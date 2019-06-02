@@ -1,3 +1,5 @@
+import java.io.File;
+
 import javax.swing.SwingUtilities;
 
 import com.box.sdk.BoxAPIConnection;
@@ -71,5 +73,48 @@ public final class SessionTypeController1 implements SessionTypeController {
     @Override
     public void processLoadEvent() {
         System.out.println("Load Previous Session Button Pressed");
+        this.view.swapToLoadView();
+    }
+
+    @Override
+    public void processStartEvent() {
+        String fileName = this.view.getSelectedVideo();
+        File file = new File(FileHelper.userVideoUrl() + fileName);
+        //TODO get class name
+
+        class myTask implements Runnable {
+            BoxAPIConnection api;
+            String fileName;
+            File file;
+
+            myTask(BoxAPIConnection api, SessionTypeView view, String fileName,
+                    File file) {
+                this.api = api;
+                this.fileName = fileName;
+                this.file = file;
+            }
+
+            @Override
+            public void run() {
+                //Open the next GUI and close this one
+                /*
+                 * Create instances of the model, view, and controller objects,
+                 * and initialize them; view needs to know about controller, and
+                 * controller needs to know about model and view
+                 */
+                YOLOBboxModel model = new YOLOBboxModel1(this.api,
+                        this.fileName, this.file);
+                YOLOBboxView view = new YOLOBboxView1();
+                YOLOBboxController controller = new YOLOBboxController1(model,
+                        view);
+                view.registerObserver(controller);
+                //TODO Close this window
+
+            }
+
+        }
+        SwingUtilities.invokeLater(
+                new myTask(this.model.api(), this.view, fileName, file));
+        this.view.disposeFrame();
     }
 }

@@ -12,4 +12,5 @@ public class Config {
     public static String[] path_to_videos = { "Raw" };
     public static String training_data_pfile_name = "pfile.txt";
     public static String raw_video_pfile_name = "raw_pfile.txt";
+    public static String training_file_data_prefix = "uwrt/Trainingdata/";
 }

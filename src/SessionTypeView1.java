@@ -30,21 +30,24 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
      * GUI widgets that need to be in scope in actionPerformed method, and
      * related constants.
      */
-    private static final int ROWS_IN_BUTTON_PANEL_GRID = 1,
-            COLUMNS_IN_BUTTON_PANEL_GRID = 2, ROWS_IN_THIS_GRID = 1,
+    private static final int ROWS_IN_TYPE_PANEL_GRID = 1,
+            COLUMNS_IN_TYPE_PANEL_GRID = 2, ROWS_IN_LOAD_PANEL_GRID = 1,
+            COLUMNS_IN_LOAD_PANEL_GRID = 2, ROWS_IN_LOAD_CHOICE_PANEL_GRID = 2,
+            COLUMNS_IN_LOAD_CHOICE_PANEL_GRID = 1, ROWS_IN_THIS_GRID = 1,
             COLUMNS_IN_THIS_GRID = 2, DEFAULT_WIDTH_OF_WINDOW = 400,
             DEFAULT_HEIGHT_OF_WINDOW = 200;
 
     /**
      * Buttons.
      */
-    private final JButton newButton, loadButton, startButton;
+    private final JButton newButton, loadButton, startButton, backButton;
 
     /**
      * Labels
      */
     private final JLabel welcomeLabel;
-    private final JPanel buttonPanel;
+    private final JPanel newLoadButtonPanel, backLoadButtonPanel,
+            loadButtonPanel;
     private final JSplitPane splitMain;
 
     /**
@@ -72,6 +75,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.newButton = new JButton("Begin New Session");
         this.loadButton = new JButton("Load Previous Session");
         this.startButton = new JButton("Resume Labelling");
+        this.backButton = new JButton("Back");
         this.welcomeLabel = new JLabel(
                 "<html>Welcome, {User}<br>What would you like to do?</html>");
         this.loadComboBox = new JComboBox<String>();
@@ -82,8 +86,13 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.splitMain
                 .setDividerLocation((int) (DEFAULT_HEIGHT_OF_WINDOW / 2.5));
         this.splitMain.setOrientation(JSplitPane.VERTICAL_SPLIT);
-        this.buttonPanel = new JPanel(new GridLayout(ROWS_IN_BUTTON_PANEL_GRID,
-                COLUMNS_IN_BUTTON_PANEL_GRID));
+        this.newLoadButtonPanel = new JPanel(new GridLayout(
+                ROWS_IN_TYPE_PANEL_GRID, COLUMNS_IN_TYPE_PANEL_GRID));
+        this.backLoadButtonPanel = new JPanel(new GridLayout(
+                ROWS_IN_LOAD_PANEL_GRID, COLUMNS_IN_LOAD_PANEL_GRID));
+        this.loadButtonPanel = new JPanel(
+                new GridLayout(ROWS_IN_LOAD_CHOICE_PANEL_GRID,
+                        COLUMNS_IN_LOAD_CHOICE_PANEL_GRID));
         this.loadComboBox.setEnabled(false);
         this.fillInLoadComboBox();
 
@@ -96,10 +105,14 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
          * Add scroll panes and button panel to main window, from left to right
          * and top to bottom
          */
+        this.backLoadButtonPanel.add(this.backButton);
+        this.backLoadButtonPanel.add(this.loadButtonPanel);
+        this.loadButtonPanel.add(this.loadComboBox);
+        this.loadButtonPanel.add(this.startButton);
         this.splitMain.setTopComponent(this.welcomeLabel);
-        this.buttonPanel.add(this.newButton);
-        this.buttonPanel.add(this.loadButton);
-        this.splitMain.setBottomComponent(this.buttonPanel);
+        this.newLoadButtonPanel.add(this.newButton);
+        this.newLoadButtonPanel.add(this.loadButton);
+        this.splitMain.setBottomComponent(this.newLoadButtonPanel);
         this.add(this.splitMain);
         this.setMinimumSize(new Dimension(DEFAULT_WIDTH_OF_WINDOW,
                 DEFAULT_HEIGHT_OF_WINDOW));
@@ -113,6 +126,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.newButton.addActionListener(this);
         this.loadButton.addActionListener(this);
         this.startButton.addActionListener(this);
+        this.backButton.addActionListener(this);
 
         // Start the main application window --------------------------------
 
@@ -182,7 +196,6 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
          */
 
         Object source = event.getSource();
-        //TODO: Add startButton Code
         if (source == this.newButton) {
             this.toggleButtons();
             this.controller.processNewEvent();
@@ -195,7 +208,10 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
             this.toggleButtons();
             this.controller.processStartEvent();
             this.toggleButtons();
-
+        } else if (source == this.backButton) {
+            this.toggleButtons();
+            this.controller.processBackEvent();
+            this.toggleButtons();
         } else {
             System.out.println("How?");
         }
@@ -218,9 +234,14 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
 
     @Override
     public void swapToLoadView() {
-        this.buttonPanel.removeAll();
-        this.buttonPanel.add(this.loadComboBox);
-        this.buttonPanel.add(this.startButton);
+        this.splitMain.setBottomComponent(this.backLoadButtonPanel);
+        this.revalidate();
+        this.repaint();
+    }
+
+    @Override
+    public void swapToChoiceView() {
+        this.splitMain.setBottomComponent(this.newLoadButtonPanel);
         this.revalidate();
         this.repaint();
     }

@@ -89,4 +89,6 @@ public interface YOLOBboxModel {
 
     void loadData() throws NumberFormatException, IOException;
 
+    String[] pathToClass();
+
 }

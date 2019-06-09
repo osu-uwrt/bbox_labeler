@@ -63,9 +63,6 @@ public class LoginGUI3 extends Application {
                                     .getInfo();
                             System.out.format("Welcome, %s <%s>!\n\n",
                                     userInfo.getName(), userInfo.getLogin());
-
-                            BoxFolder rootFolder = BoxFolder.getRootFolder(api);
-                            listFolder(rootFolder, 0);
                             //Open the next GUI and close this one
                             /*
                              * Create instances of the model, view, and

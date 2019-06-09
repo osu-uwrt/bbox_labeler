@@ -24,5 +24,7 @@ public interface SessionTypeView extends ActionListener {
 
     public void swapToLoadView();
 
+    public void swapToChoiceView();
+
     public String getSelectedVideo();
 }

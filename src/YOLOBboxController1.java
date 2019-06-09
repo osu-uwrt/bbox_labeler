@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
@@ -113,7 +115,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //load the video
         this.loadVideo();
         //set the default frame jump to the frame rate of the video
-        this.model.setFrameJump(this.model.frameRate());
+        this.model.setFrameJump(this.model.frameRate() / 2);
         /*
          * Update view to reflect initial value of model
          */
@@ -181,11 +183,16 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             List<File> fileList = this.createExportFiles(lastIndex);
             BoxFolder dataClassFolder = BoxHelper.getSubFolder(yoloFolder,
                     Config.path_to_data);
+            if (!BoxHelper.fileExists(dataClassFolder,
+                    this.model.className())) {
+                BoxHelper.createFolder(dataClassFolder, this.model.className());
+            }
             dataClassFolder = BoxHelper.getSubFolder(dataClassFolder,
-                    new String[] { this.model.className() });
+                    this.model.pathToClass());
             this.uploadFiles(fileList, dataClassFolder);
-            this.appendPFile(lastIndex + fileList.size());
-            this.appendVideoPFile(lastIndex + 1, lastIndex + fileList.size());
+            this.appendPFile(lastIndex + (fileList.size() / 2));
+            this.appendVideoPFile(lastIndex + 1,
+                    lastIndex + (fileList.size() / 2));
             DateFormat dateFormatForYear = new SimpleDateFormat("yyyy");
             String currentYear = dateFormatForYear.format(new Date());
             String trainingFileName = "train_RS" + currentYear + ".txt";
@@ -206,28 +213,39 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                     + Config.training_data_pfile_name);
             File outputVideoPFile = new File(
                     FileHelper.userOutputUrl() + Config.raw_video_pfile_name);
+            File indexFile = new File(
+                    FileHelper.userProgramUrl() + Config.index_file_name);
+            File outputIndexFile = new File(
+                    FileHelper.userOutputUrl() + Config.index_file_name);
+            File saveFile = new File(
+                    FileHelper.userSaveUrl() + this.model.videoName() + ".txt");
             this.updateTrainingFiles(trainingFile, validationFile, fileList);
             this.copyFile(dataPFile, outputDataPFile);
             this.copyFile(videoPFile, outputVideoPFile);
             this.copyFile(trainingFile, outputTrainingFile);
             this.copyFile(validationFile, outputValidationFile);
+            this.copyFile(indexFile, outputIndexFile);
             BoxFolder dataFolder = BoxHelper.getSubFolder(yoloFolder,
                     Config.path_to_data);
             BoxFolder videoClassFolder = BoxHelper.getSubFolder(yoloFolder,
                     Config.path_to_videos);
-            videoClassFolder = BoxHelper.getSubFolder(yoloFolder,
-                    new String[] { this.model.className() });
+            videoClassFolder = BoxHelper.getSubFolder(videoClassFolder,
+                    this.model.pathToClass());
             BoxHelper.reuploadFile(trainingFileName, dataFolder);
             BoxHelper.reuploadFile(validationFileName, dataFolder);
             BoxHelper.reuploadFile(Config.training_data_pfile_name,
                     dataClassFolder);
-            BoxHelper.reuploadFile(Config.training_data_pfile_name,
+
+            BoxHelper.reuploadFile(Config.raw_video_pfile_name,
                     videoClassFolder);
+            BoxHelper.reuploadFile(Config.index_file_name, yoloFolder);
             File videoFile = this.model.file();
             Collections.addAll(fileList, trainingFile, outputTrainingFile,
                     validationFile, outputValidationFile, dataPFile,
-                    outputDataPFile, videoPFile, outputVideoPFile, videoFile);
+                    outputDataPFile, videoPFile, outputVideoPFile, videoFile,
+                    indexFile, outputIndexFile, saveFile);
             this.deleteFiles(fileList);
+            this.view.dispose();
         } catch (IOException e1) {
             System.out.println("Problem exporting");
             e1.printStackTrace();
@@ -248,13 +266,16 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      *            the image to be ouput
      * @param yolo
      *            the data to be output
+     * @param index
+     *            the index for the item being labelled
      * @return the files that were output
      */
     private List<File> outputFrame(int id, String fileLocation,
-            String className, BufferedImage image, YOLO yolo) {
+            String className, BufferedImage image, YOLO yolo, int index) {
         List<File> fileList = new LinkedList<File>();
         fileList.addAll(this.outputImage(id, fileLocation, className, image));
-        fileList.addAll(this.outputData(id, fileLocation, className, yolo));
+        fileList.addAll(
+                this.outputData(id, fileLocation, className, yolo, index));
         return fileList;
     }
 
@@ -325,10 +346,12 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      *            the name of the class being worked on
      * @param yolo
      *            the yolo data to be output
+     * @param index
+     *            the index of the item being labelled
      * @return the text file that was output as a list of files
      */
     private List<File> outputData(int id, String fileLocation, String className,
-            YOLO yolo) {
+            YOLO yolo, int index) {
         List<File> fileList = new LinkedList<File>();
         PrintWriter writer;
 
@@ -345,8 +368,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         try {
             writer = new PrintWriter(dataFile, "UTF-8");
             //print [item index] [x] [y] [width] [height]
-            writer.println(this.model.itemIndex() + " " + yolo.x() + " "
-                    + yolo.y() + " " + yolo.width() + " " + yolo.height());
+            writer.println(index + " " + yolo.x() + " " + yolo.y() + " "
+                    + yolo.width() + " " + yolo.height());
             writer.close();
         } catch (FileNotFoundException | UnsupportedEncodingException e) {
             System.err.println("Problem exporting to text file");
@@ -385,20 +408,22 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      */
     private void updateTrainingFiles(File trainingFile, File validationFile,
             List<File> fileList) throws IOException {
-        Writer trainingFileWriter = new FileWriter(trainingFile);
-        Writer validationFileWriter = new FileWriter(validationFile);
+        Writer trainingFileWriter = new FileWriter(trainingFile, true);
+        Writer validationFileWriter = new FileWriter(validationFile, true);
         for (File file : fileList) {
             //if the file is a jpg
             if (file.getName().indexOf(".jpg") >= 0) {
                 double rand = Math.random();
                 if (rand <= 0.15) {
                     //put it in the validation file
-                    validationFileWriter.write(Config.training_file_data_prefix
-                            + this.model.className() + "/" + file.getName());
+                    validationFileWriter.append(Config.training_file_data_prefix
+                            + this.model.className() + "/" + file.getName()
+                            + System.lineSeparator());
                 } else {
                     //put it in the training file
-                    trainingFileWriter.write(Config.training_file_data_prefix
-                            + this.model.className() + "/" + file.getName());
+                    trainingFileWriter.append(Config.training_file_data_prefix
+                            + this.model.className() + "/" + file.getName()
+                            + System.lineSeparator());
                 }
             }
         }
@@ -407,8 +432,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     }
 
     /**
-     * Downloads the video pfile, data pfile, training file, and validation
-     * files. If any of them don't exist on box create a new local version.
+     * Downloads the video pfile, data pfile, class index file, training file,
+     * and validation files. If any of them don't exist on box create a new
+     * local version.
      *
      * @param yoloFolder
      * @throws IOException
@@ -417,12 +443,20 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //download data pfile
         BoxFolder dataClassFolder = BoxHelper.getSubFolder(yoloFolder,
                 Config.path_to_data);
-        String[] classPath = { this.model.className() };
+        String[] classPath = this.model.pathToClass();
         dataClassFolder = BoxHelper.getSubFolder(dataClassFolder, classPath);
         try {
-            BoxHelper.DownloadFile(this.model.api(), dataClassFolder,
+            if (!BoxHelper.DownloadFile(this.model.api(), dataClassFolder,
                     Config.training_data_pfile_name,
-                    FileHelper.userProgramUrl());
+                    FileHelper.userProgramUrl())) {
+                System.out.println(
+                        "Data pfile could not be downloaded. Creating new file.");
+                File file = new File(FileHelper.userProgramUrl()
+                        + Config.training_data_pfile_name);
+                while (!file.createNewFile()) {
+                    file.delete();
+                }
+            }
         } catch (InvocationTargetException | IOException
                 | InterruptedException e) {
             System.out.println(
@@ -436,11 +470,19 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
         //download video pfile
         BoxFolder videoClassFolder = BoxHelper.getSubFolder(yoloFolder,
-                Config.path_to_data);
+                Config.path_to_videos);
         videoClassFolder = BoxHelper.getSubFolder(videoClassFolder, classPath);
         try {
-            BoxHelper.DownloadFile(this.model.api(), videoClassFolder,
-                    Config.raw_video_pfile_name, FileHelper.userProgramUrl());
+            if (!BoxHelper.DownloadFile(this.model.api(), videoClassFolder,
+                    Config.raw_video_pfile_name, FileHelper.userProgramUrl())) {
+                System.out.println(
+                        "Video pfile could not be downloaded. Creating new file.");
+                File file = new File(FileHelper.userProgramUrl()
+                        + Config.raw_video_pfile_name);
+                while (!file.createNewFile()) {
+                    file.delete();
+                }
+            }
         } catch (InvocationTargetException | InterruptedException e) {
             System.out.println(
                     "Video pfile could not be downloaded. Creating new file.");
@@ -458,8 +500,16 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         BoxFolder dataFolder = BoxHelper.getSubFolder(yoloFolder,
                 Config.path_to_data);
         try {
-            BoxHelper.DownloadFile(this.model.api(), dataFolder,
-                    trainingFileName, FileHelper.userProgramUrl());
+            if (!BoxHelper.DownloadFile(this.model.api(), dataFolder,
+                    trainingFileName, FileHelper.userProgramUrl())) {
+                System.out.println(
+                        "training file could not be downloaded. Creating new file.");
+                File file = new File(
+                        FileHelper.userProgramUrl() + trainingFileName);
+                while (!file.createNewFile()) {
+                    file.delete();
+                }
+            }
         } catch (InvocationTargetException | InterruptedException e) {
             System.out.println(
                     "training file could not be downloaded. Creating new file.");
@@ -473,13 +523,36 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         //download validation file
         String validationFileName = "valid_RS" + currentYear + ".txt";
         try {
-            BoxHelper.DownloadFile(this.model.api(), dataFolder,
-                    validationFileName, FileHelper.userProgramUrl());
+            if (!BoxHelper.DownloadFile(this.model.api(), dataFolder,
+                    validationFileName, FileHelper.userProgramUrl())) {
+                System.out.println(
+                        "validation file could not be downloaded. Creating new file.");
+                File file = new File(
+                        FileHelper.userProgramUrl() + validationFileName);
+                while (!file.createNewFile()) {
+                    file.delete();
+                }
+            }
         } catch (InvocationTargetException | InterruptedException e) {
             System.out.println(
                     "validation file could not be downloaded. Creating new file.");
             File file = new File(
                     FileHelper.userProgramUrl() + validationFileName);
+            while (!file.createNewFile()) {
+                file.delete();
+            }
+        }
+
+        //download class index file
+        String classIndexFileName = Config.index_file_name;
+        try {
+            BoxHelper.DownloadFile(this.model.api(), yoloFolder,
+                    classIndexFileName, FileHelper.userProgramUrl());
+        } catch (InvocationTargetException | InterruptedException e) {
+            System.out.println(
+                    "validation file could not be downloaded. Creating new file.");
+            File file = new File(
+                    FileHelper.userProgramUrl() + classIndexFileName);
             while (!file.createNewFile()) {
                 file.delete();
             }
@@ -505,11 +578,94 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         DateFormat df = new SimpleDateFormat("MM/dd/yyyy");
         String date = df.format(new Date());
         pFileBufferedWriter
-                .write(this.model.file().getName() + ", " + date + ", "
+                .append(this.model.file().getName() + ", " + date + ", "
                         + BoxUser.getCurrentUser(this.model.api()).getInfo()
                                 .getName()
                         + ", " + startIndex + ", " + lastIndex);
         pFileBufferedWriter.close();
+    }
+
+    /**
+     * Gets the index for the class from the index file. If it can't find one,
+     * it asks the user and adds it to the file.
+     *
+     * @return
+     */
+    private int getIndex() {
+        int index = -1;
+        File indexFile = new File(
+                FileHelper.userProgramUrl() + Config.index_file_name);
+        try {
+            BufferedReader indexFileReader = new BufferedReader(
+                    new FileReader(indexFile));
+            String line;
+            Boolean classFound = false;
+            while (!classFound && (line = indexFileReader.readLine()) != null) {
+                if (line.startsWith(this.model.className())) {
+                    line = line.substring(this.model.className().length());
+                    String regex = "([0-9]+)";
+                    Pattern pattern = Pattern.compile(regex);
+                    Matcher matcher = pattern.matcher(line);
+                    if (matcher.find()) {
+                        index = Integer.parseInt(matcher.group());
+                        classFound = true;
+                    }
+                }
+            }
+            indexFileReader.close();
+            if (index == -1) {
+                index = this.askForIndex();
+            }
+        } catch (IOException e) {
+            index = this.askForIndex();
+        }
+        return index;
+    }
+
+    /**
+     * Creates a pop-up window asking the user for an integer to use as the
+     * index for the class. Keeps asking until a valid integer is given or
+     * nothing is given. If a valid integer is given, it writes a line on the
+     * index file for the class and then returns the index. If nothing is given
+     * it returns -1.
+     *
+     * @return the integer given or -1 if nothing is given
+     */
+    private int askForIndex() {
+        int index = -1;
+        String input = "";
+        while (input == "") {
+            input = JOptionPane.showInputDialog("Could not find an index for "
+                    + this.model.className()
+                    + ". Please enter an integer for this class or leave it"
+                    + " empty to stop exporting.");
+            if (input != null && input.length() > 0) {
+                String regex = "([0-9]+)";
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(input);
+                if (matcher.find()) {
+                    index = Integer.parseInt(matcher.group());
+                }
+                if (index > 0) {
+                    File indexFile = new File(FileHelper.userProgramUrl()
+                            + Config.index_file_name);
+                    try {
+                        FileWriter writer = new FileWriter(indexFile);
+                        writer.append(this.model.className() + ": " + index
+                                + System.lineSeparator());
+                        writer.close();
+                    } catch (IOException e) {
+                        System.err.println("Index file could not be written.");
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println(
+                            "Input: " + input + " is not valid. Asking again.");
+                    input = "";
+                }
+            }
+        }
+        return index;
     }
 
     /**
@@ -524,34 +680,40 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         List<YOLO> yolo = this.model.yolo();
         List<File> exportedFiles = new LinkedList<File>();
         String outputDirectory = FileHelper.userOutputUrl();
+        int index;
+        if ((index = this.getIndex()) > 0) {
+            FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+            try {
+                frameGrabber.start();
+                Java2DFrameConverter j = new Java2DFrameConverter();
 
-        FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
-        try {
-            frameGrabber.start();
-            Java2DFrameConverter j = new Java2DFrameConverter();
-
-            //counter for iterating through yolo
-            int i = 0;
-            while (i < max) {
-                //get the YOLO values
-                this.findYOLOValues(i);
-                //iterate through the yolos and create the files for the ones with data
-                YOLO next = yolo.get(i);
-                if (next.x() > 0.0 && next.y() > 0.0 && next.width() > 0.0
-                        && next.height() > 0.0) {
-                    frameGrabber.setFrameNumber(i);
-                    BufferedImage image = j.convert(frameGrabber.grabImage());
-                    int id = lastIndex + 1;
-                    lastIndex++;
-                    exportedFiles.addAll(this.outputFrame(id, outputDirectory,
-                            className, image, next));
+                //counter for iterating through yolo
+                int i = 0;
+                while (i < max) {
+                    //get the YOLO values
+                    this.findYOLOValues(i);
+                    //iterate through the yolos and create the files for the ones with data
+                    YOLO next = yolo.get(i);
+                    if (next.x() > 0.0 && next.y() > 0.0 && next.width() > 0.0
+                            && next.height() > 0.0) {
+                        frameGrabber.setFrameNumber(i);
+                        BufferedImage image = j
+                                .convert(frameGrabber.grabImage());
+                        int id = lastIndex + 1;
+                        lastIndex++;
+                        exportedFiles
+                                .addAll(this.outputFrame(id, outputDirectory,
+                                        className, image, next, index));
+                    }
+                    i++;
                 }
-                i++;
+                frameGrabber.close();
+                System.out.println(
+                        "Output Files created in : " + outputDirectory);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            frameGrabber.close();
-            System.out.println("Output Files created in : " + outputDirectory);
-        } catch (Exception e) {
-            e.printStackTrace();
+
         }
         return exportedFiles;
     }
@@ -589,7 +751,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         pFileBufferedWriter.newLine();
         DateFormat df = new SimpleDateFormat("MM/dd/yyyy");
         String date = df.format(new Date());
-        pFileBufferedWriter.write(date + ", " + lastIndex);
+        pFileBufferedWriter.append(date + ", " + lastIndex);
         pFileBufferedWriter.close();
     }
 
@@ -613,10 +775,12 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             }
             pFileBufferedReader.close();
             //cut off everything before the comma, the comma, and the space
-            previousLine = previousLine
-                    .substring(previousLine.indexOf(',') + 2);
-            //get the last index value from that line
-            lastIndex = Integer.parseInt(previousLine);
+            if (previousLine.length() > 3) {
+                previousLine = previousLine
+                        .substring(previousLine.indexOf(',') + 2);
+                //get the last index value from that line
+                lastIndex = Integer.parseInt(previousLine);
+            }
         } catch (IOException e) {
             System.err.println("pfile.txt could not be found on local machine");
             e.printStackTrace();
@@ -1186,6 +1350,21 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();
         WritableRaster raster = bi.copyData(null);
         return new BufferedImage(cm, raster, isAlphaPremultiplied, null);
+    }
+
+    @Override
+    public void incrmentFrameJump() {
+        this.model.setFrameJump(this.model.frameJump() + 1);
+        this.updateViewToMatchModel(this.model, this.view);
+    }
+
+    @Override
+    public void decrementFrameJump() {
+        this.model.setFrameJump(this.model.frameJump() + 1);
+        if (this.model.frameJump() < 1) {
+            this.model.setFrameJump(1);
+        }
+        this.updateViewToMatchModel(this.model, this.view);
     }
 
 }

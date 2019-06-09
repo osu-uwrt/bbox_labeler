@@ -363,4 +363,10 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.videoName = videoName;
     }
 
+    @Override
+    public String[] pathToClass() {
+        String[] path = { this.className };
+        return path;
+    }
+
 }

@@ -24,7 +24,7 @@ public interface SessionTypeController {
     void processNewEvent();
 
     /**
-     * Opens a new window to select the video to continue working on
+     * Changes the UI to choose a video to continue working on
      */
     void processLoadEvent();
 
@@ -34,4 +34,8 @@ public interface SessionTypeController {
      */
     void processStartEvent();
 
+    /**
+     * Changes the UI back to the new or load buttons
+     */
+    void processBackEvent();
 }

@@ -5,6 +5,8 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -26,8 +28,8 @@ import javax.swing.text.NumberFormatter;
  * @author Derek Opdycke
  */
 @SuppressWarnings("serial")
-public final class YOLOBboxView1 extends JFrame
-        implements YOLOBboxView, MouseListener, MouseMotionListener {
+public final class YOLOBboxView1 extends JFrame implements YOLOBboxView,
+        MouseListener, MouseMotionListener, KeyListener {
 
     /**
      * Controller object.
@@ -372,10 +374,6 @@ public final class YOLOBboxView1 extends JFrame
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        System.out.println("Image Clicked");
-        System.out.println("X-coord: " + e.getX());
-        System.out.println("Y-coord: " + e.getY());
-        System.out.println("Image Clicked");
         this.controller.processMouseClickedEvent(e.getX(), e.getY());
     }
 
@@ -411,9 +409,6 @@ public final class YOLOBboxView1 extends JFrame
 
     @Override
     public void mouseMoved(MouseEvent arg0) {
-        //System.out.println("Mouse Moved in image");
-        //System.out.println("X-coord: " + arg0.getX());
-        //System.out.println("Y-coord: " + arg0.getY());
         this.controller.processMouseMovedEvent(arg0.getX(), arg0.getY());
 
     }
@@ -424,4 +419,27 @@ public final class YOLOBboxView1 extends JFrame
                 .setDividerLocation(this.getHeight() - BUTTON_PANEL_HEIGHT);
     }
 
+    @Override
+    public void keyPressed(KeyEvent evt) {
+        System.out.println("Key Pressed");
+        if (evt.getKeyChar() == KeyEvent.VK_LEFT) {
+            this.controller.processFramesBackEvent();
+        } else if (evt.getKeyChar() == KeyEvent.VK_RIGHT) {
+            this.controller.processFramesForwardEvent();
+        } else if (evt.getKeyChar() == KeyEvent.VK_UP) {
+            this.controller.incrmentFrameJump();
+        } else if (evt.getKeyChar() == KeyEvent.VK_DOWN) {
+            this.controller.decrementFrameJump();
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent arg0) {
+        System.out.println("Key Pressed");
+    }
+
+    @Override
+    public void keyTyped(KeyEvent arg0) {
+        System.out.println("Key Pressed");
+    }
 }

@@ -259,7 +259,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         //Does it need to be on a new row?
         if (this.count == COLUMNS_IN_VIDEO_PANEL) {
             //make a new row
-            System.out.println("make a new row");
             this.currentVideoPanel = new JPanel();
             this.currentVideoPanel.setLayout(
                     new BoxLayout(this.currentVideoPanel, BoxLayout.X_AXIS));
@@ -268,7 +267,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         }
         this.count++;
         //add it to the current one
-        System.out.println("add the video");
         this.currentVideoPanel.add(outer);
         //add to the video panel list
         videoPanels.add(outer);
@@ -339,18 +337,15 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
             Object source = e.getSource();
             JPanel panelClicked;
             if (source instanceof JPanel) {
-                System.out.println("mouse clicked in video panel");
                 panelClicked = (JPanel) source;
                 NewSessionView1.this.controller
                         .processPanelSelect(panelClicked);
             } else if (source instanceof JLabel) {
-                System.out.println("mouse clicked in label");
                 panelClicked = (JPanel) ((Component) source).getParent()
                         .getParent();
                 NewSessionView1.this.controller
                         .processPanelSelect(panelClicked);
             } else if (source instanceof JSplitPane) {
-                System.out.println("mouse clicked in split pane");
                 panelClicked = (JPanel) ((Component) source).getParent();
                 NewSessionView1.this.controller
                         .processPanelSelect(panelClicked);
@@ -502,7 +497,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
 
     @Override
     public void progress(long max) {
-        System.out.println("THERE");
         this.videoScrollPane.getViewport().removeAll();
         this.progressBar.setMaximum((int) (max / progressBarScalar));
         this.progressBar.setValue(this.progressBar.getMaximum() / 2);
@@ -511,7 +505,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
         progressBarMade = true;
         this.revalidate();
         this.repaint();
-        System.out.println("EVERYHERE");
 
     }
 
@@ -520,7 +513,6 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
      */
     @Override
     public void changeToProgressBar(long max) {
-        System.out.println("Change to progress bar");
         //ProgressbarWorker<String, Void> myWorker = new ProgressbarWorker<String, Void>(
         //        this, max);
         //myWorker.execute();
@@ -533,13 +525,11 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
      */
     @Override
     public void setProgress(long progress) {
-        System.out.println("Change bar to :" + progress);
         //make sure the progress bar exists
         if (progressBarMade) {
             //change the progress in the progress bar to the given value
             this.progressBar.setValue((int) (progress / progressBarScalar));
             this.repaint();
-            System.out.println("progressbar updated");
         }
     }
 
@@ -567,7 +557,7 @@ public final class NewSessionView1 extends JFrame implements NewSessionView {
             this.count++;
             if (this.count > 100) {
                 this.count = 0;
-                System.out.println("Current Bytes: " + numBytes);
+                System.out.println("Bytes Downloaded: " + numBytes);
                 //System.out.println("Total Bytes: " + totalBytes);
                 //System.out.println("Downloaded " + percentComplete + "%");
                 class myTask implements Runnable {

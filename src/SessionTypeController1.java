@@ -39,7 +39,6 @@ public final class SessionTypeController1 implements SessionTypeController {
 
     @Override
     public void processNewEvent() {
-        System.out.println("Begin New Session Button Pressed");
 
         class myTask implements Runnable {
             BoxAPIConnection api;
@@ -72,7 +71,6 @@ public final class SessionTypeController1 implements SessionTypeController {
 
     @Override
     public void processLoadEvent() {
-        System.out.println("Load Previous Session Button Pressed");
         this.view.swapToLoadView();
     }
 
@@ -116,5 +114,10 @@ public final class SessionTypeController1 implements SessionTypeController {
         SwingUtilities.invokeLater(
                 new myTask(this.model.api(), this.view, fileName, file));
         this.view.disposeFrame();
+    }
+
+    @Override
+    public void processBackEvent() {
+        this.view.swapToChoiceView();
     }
 }

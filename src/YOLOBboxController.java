@@ -103,4 +103,14 @@ public interface YOLOBboxController {
      */
     void processMouseMovedEvent(int x, int y);
 
+    /**
+     * Increments the number of frames to jump.
+     */
+    void incrmentFrameJump();
+
+    /**
+     * Decrements the number of frames to jump.
+     */
+    void decrementFrameJump();
+
 }

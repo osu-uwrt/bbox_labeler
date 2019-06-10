@@ -94,11 +94,12 @@ public class BoxHelper {
      * @param fileName
      * @param url
      *            Can be relative or absolute but must end with a file separator
+     * @return true if the file was downloaded and false otherwise
      * @throws IOException
      * @throws InterruptedException
      * @throws InvocationTargetException
      */
-    public static void DownloadFile(BoxAPIConnection api, BoxFolder folder,
+    public static boolean DownloadFile(BoxAPIConnection api, BoxFolder folder,
             String fileName, String url) throws IOException,
             InvocationTargetException, InterruptedException {
         Iterator<Info> it = folder.getChildren().iterator();
@@ -113,8 +114,10 @@ public class BoxHelper {
                 os = new FileOutputStream(url + file.getInfo().getName());
                 file.download(os);
                 os.close();
+                return true;
             }
         }
+        return false;
     }
 
     /**
@@ -150,7 +153,10 @@ public class BoxHelper {
                 System.err.println("Error occured trying to download: "
                         + Config.raw_video_pfile_name);
                 e.printStackTrace();
+                return false;
             }
+        } else {
+            return false;
         }
         return true;
     }
@@ -320,7 +326,6 @@ public class BoxHelper {
             }
             i++;
         }
-        System.out.println(folder.toString());
         return folder;
     }
 

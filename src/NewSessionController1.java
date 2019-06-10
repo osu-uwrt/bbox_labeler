@@ -35,8 +35,6 @@ public final class NewSessionController1 implements NewSessionController {
      */
     private final NewSessionView view;
 
-    private final Boolean DEBUG = true;
-
     /**
      * Can be 32, 64, 128, and 256 while using png
      */
@@ -56,14 +54,11 @@ public final class NewSessionController1 implements NewSessionController {
         BoxAPIConnection api = this.model.api();
         BoxFolder videoFolder = BoxFolder.getRootFolder(api);
         BoxFolder dataFolder = BoxFolder.getRootFolder(api);
-        System.out.println("Folder: " + videoFolder);
         if (BoxHelper.pathExists(videoFolder, this.model.pathToYOLO())) {
             videoFolder = BoxHelper.getSubFolder(videoFolder,
                     this.model.pathToYOLO());
             dataFolder = BoxHelper.getSubFolder(dataFolder,
                     this.model.pathToYOLO());
-            System.out.println("Folder: " + videoFolder);
-            BoxHelper.listFolder(videoFolder);
             if (BoxHelper.pathExists(videoFolder, this.model.pathToVideos())) {
                 if (BoxHelper.pathExists(dataFolder, this.model.pathToData())) {
                     videoFolder = BoxHelper.getSubFolder(videoFolder,
@@ -80,9 +75,6 @@ public final class NewSessionController1 implements NewSessionController {
                             classPath);
                     //add each video to the view
                     this.addVideosToView(videoFolder);
-                    if (this.DEBUG) {
-                        System.out.println();
-                    }
                 } else {
                     //couldnt find the path
                     System.out.print("Could not find path to "
@@ -115,8 +107,17 @@ public final class NewSessionController1 implements NewSessionController {
      */
     private void addVideosToView(BoxFolder videoFolder) {
         //download the video pfile
-        BoxHelper.getVideoPFile(this.model.api(), this.view.getSelectedClass());
         BoxAPIConnection api = this.model.api();
+        if (!BoxHelper.getVideoPFile(api, this.view.getSelectedClass())) {
+            try {
+                System.out.println("Creating new video pfile");
+                new File(FileHelper.userProgramUrl()
+                        + Config.raw_video_pfile_name).createNewFile();
+            } catch (IOException e) {
+                System.out.println("Cant create new video pfile");
+                e.printStackTrace();
+            }
+        }
         Iterator<Info> it = videoFolder.getChildren().iterator();
         while (it.hasNext()) {
             Info info = it.next();
@@ -140,10 +141,6 @@ public final class NewSessionController1 implements NewSessionController {
         byte[] thumbnail = file.getThumbnail(BoxFile.ThumbnailFileType.PNG,
                 this.thumbnailSize, this.thumbnailSize, this.thumbnailSize,
                 this.thumbnailSize);
-        if (this.DEBUG) {
-            System.out.println("Thumbnail found");
-            System.out.println(thumbnail.toString());
-        }
         //get the name of the file
         String name = file.getInfo().getName();
         //add the video
@@ -160,9 +157,6 @@ public final class NewSessionController1 implements NewSessionController {
     @Override
     public void processBeginLabellingEvent() {
         //Open the BBox GUI and give it the API, class, and video name
-        if (this.DEBUG) {
-            System.out.println("Processing BeginLabellingEvent");
-        }
         /**
          * download the video
          */
@@ -214,7 +208,7 @@ public final class NewSessionController1 implements NewSessionController {
         YOLOBboxView view = new YOLOBboxView1();
         YOLOBboxController controller = new YOLOBboxController1(model, view);
         view.registerObserver(controller);
-        //TODO Close this window
+        this.view.disposeFrame();
     }
 
     /**
@@ -238,7 +232,6 @@ public final class NewSessionController1 implements NewSessionController {
         Iterator<Info> it = folder.getChildren().iterator();
         while (it.hasNext()) {
             Info info = it.next();
-            System.out.println("Found file: " + info.getName());
             //if its a file and has the name of the selected video
             if (info instanceof BoxFile.Info
                     && info.getName().equals(fileName)) {
@@ -286,7 +279,7 @@ public final class NewSessionController1 implements NewSessionController {
                         double percentComplete = numBytes / totalBytes * 100;
 
                         this.count++;
-                        if (this.count > 100) {
+                        if (this.count > 10000) {
                             this.count = 0;
                             System.out.println("Current Bytes: " + numBytes);
                             //System.out.println("Total Bytes: " + totalBytes);
@@ -335,9 +328,6 @@ public final class NewSessionController1 implements NewSessionController {
         ArrayList<String> classes = new ArrayList<String>();
         while (it.hasNext()) {
             Info info = it.next();
-            if (this.DEBUG) {
-                System.out.println("Next item: " + info.getName());
-            }
             classes.add(info.getName());
         }
         Collections.sort(classes);

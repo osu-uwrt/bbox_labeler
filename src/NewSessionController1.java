@@ -1,3 +1,4 @@
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -143,13 +144,23 @@ public final class NewSessionController1 implements NewSessionController {
                 this.thumbnailSize);
         //get the name of the file
         String name = file.getInfo().getName();
+        boolean inColor = false;
+        java.awt.Color c = this.model.getColorNeutral();
         //add the video
         try {
             InputStream bais = new ByteArrayInputStream(thumbnail);
-            java.awt.Color c = this.model.getColorNeutral();
-            boolean inColor = !FileHelper.hasVideoBeenDone(name);
+            inColor = !FileHelper.hasVideoBeenDone(name);
             this.view.addVideo(ImageIO.read(bais), name, inColor, c);
         } catch (IOException e) {
+            System.err.println("Problem displaying thumbnail for: " + name);
+            System.err.println("Displaying default image instead");
+            try {
+                BufferedImage defaultImage = ImageIO
+                        .read(new File("default.png"));
+                this.view.addVideo(defaultImage, name, inColor, c);
+            } catch (IOException e1) {
+                System.err.println("Could not open default image");
+            }
             e.printStackTrace();
         }
     }
@@ -342,13 +353,9 @@ public final class NewSessionController1 implements NewSessionController {
 
     @Override
     public void processPanelSelect(JPanel jpanel) {
-        //change the previously selected panel, if there is one,
-        //to the neutral border
-        String name = jpanel.getName();
+        //change all panels to neutral border
         for (JPanel panel : this.view.getVideoPanelsList()) {
-            if (panel.getName().equals(name)) {
-                this.view.colorBorder(panel, this.model.getRGBNeutral());
-            }
+            this.view.colorBorder(panel, this.model.getRGBNeutral());
         }
         //change the newly selected panel to the selected border
         this.view.colorBorder(jpanel, this.model.getRGBSelected());

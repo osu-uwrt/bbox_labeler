@@ -93,7 +93,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.loadButtonPanel = new JPanel(
                 new GridLayout(ROWS_IN_LOAD_CHOICE_PANEL_GRID,
                         COLUMNS_IN_LOAD_CHOICE_PANEL_GRID));
-        this.loadComboBox.setEnabled(false);
+        this.loadComboBox.setEnabled(true);
         this.fillInLoadComboBox();
 
         /*

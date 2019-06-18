@@ -13,7 +13,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
-public class LoginGUI3 extends Application {
+public class LoginGUI extends Application {
     public static void main(String[] args) {
         Application.launch(args);
     }

@@ -148,7 +148,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             frameGrabber.stop();
 
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
-
+            this.processCV();
         } catch (IOException e) {
             System.out.println("Trouble Loading Video");
         }
@@ -646,7 +646,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                 if (matcher.find()) {
                     index = Integer.parseInt(matcher.group());
                 }
-                if (index > 0) {
+                if (index >= 0) {
                     File indexFile = new File(FileHelper.userProgramUrl()
                             + Config.index_file_name);
                     try {
@@ -809,9 +809,17 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          */
     }
 
+    //for each bbox in the labelled list, if its not set replace it with the
+    //one that was filled in
     @Override
     public void processFillInFramesEvent() {
-        this.processCV();
+        List<BBox> labelledBBox = this.model.labelledBBox();
+        List<BBox> filledBBox = this.model.filledBBox();
+        for (int i = 0; i < labelledBBox.size(); i++) {
+            if (!labelledBBox.get(i).isSet()) {
+                labelledBBox.set(i, filledBBox.get(i));
+            }
+        }
     }
 
     /**
@@ -845,8 +853,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             this.model.setScaled(scaled);
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
             BufferedImage lines = deepCopy(scaled);
-            this.redrawLines(lines,
-                    this.model.bbox().get(this.model.currentFrame()));
+            if (this.model.labelledBBox().get(this.model.currentFrame())
+                    .isSet()) {
+                this.redrawLines(lines, this.model.labelledBBox()
+                        .get(this.model.currentFrame()), Color.BLACK);
+            } else {
+                this.redrawLines(lines,
+                        this.model.filledBBox().get(this.model.currentFrame()),
+                        Color.GREEN);
+            }
             this.model.setLines(lines);
             frameGrabber.stop();
         } catch (Exception e) {
@@ -891,8 +906,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             this.model.setScaled(scaled);
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
             BufferedImage lines = deepCopy(scaled);
-            this.redrawLines(lines,
-                    this.model.bbox().get(this.model.currentFrame()));
+            if (this.model.labelledBBox().get(this.model.currentFrame())
+                    .isSet()) {
+                this.redrawLines(lines, this.model.labelledBBox()
+                        .get(this.model.currentFrame()), Color.BLACK);
+            } else {
+                this.redrawLines(lines,
+                        this.model.filledBBox().get(this.model.currentFrame()),
+                        Color.GREEN);
+            }
             this.model.setLines(lines);
             frameGrabber.stop();
         } catch (Exception e) {
@@ -912,7 +934,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         File saveFile = new File(FileHelper.userSaveUrl()
                 + this.model.file().getName() + ".txt");
         saveFile.getParentFile().mkdirs();
-        List<BBox> bbox = this.model.bbox();
+        List<BBox> bbox = this.model.labelledBBox();
         try {
             BufferedWriter writer = new BufferedWriter(
                     new FileWriter(saveFile));
@@ -935,8 +957,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
         this.model.setScaled(scaled);
         BufferedImage lines = deepCopy(scaled);
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
         this.view.updateButtonAreaSize();
         /*
@@ -947,24 +976,32 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
     @Override
     public void processMouseClickedEvent(int x, int y) {
-        List<BBox> bbox = this.model.bbox();
-        BBox temp = bbox.get(this.model.currentFrame());
+        List<BBox> bbox = this.model.labelledBBox();
+        BBox tempBBox = bbox.get(this.model.currentFrame());
         //get the proportion of the click relative to the frame
         double dx = ((double) x) / this.model.scaled().getWidth();
         double dy = ((double) y) / this.model.scaled().getHeight();
         //set the pair of values based on the last pair that was set
-        if (temp.firstIsSetNext()) {
-            temp.setx1(dx);
-            temp.sety1(dy);
+        if (tempBBox.firstIsSetNext()) {
+            tempBBox.setx1(dx);
+            tempBBox.sety1(dy);
         } else {
-            temp.setx2(dx);
-            temp.sety2(dy);
+            tempBBox.setx2(dx);
+            tempBBox.sety2(dy);
         }
         //set the data where it needs to be
-        bbox.set(this.model.currentFrame(), temp);
+        bbox.set(this.model.currentFrame(), tempBBox);
+        this.processCV(this.model.currentFrame());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -978,8 +1015,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -993,8 +1037,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1008,8 +1059,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1023,8 +1081,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1038,8 +1103,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1053,8 +1125,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1069,7 +1148,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      */
     private void processCV() {
         int i = 0;
-        List<BBox> bbox = this.model.bbox();
+        List<BBox> bbox = this.model.labelledBBox();
 
         //get the first frame with a bounding box
         while (i < bbox.size() && !(bbox.get(i).isSet())) {
@@ -1137,7 +1216,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                         double y1 = yCenter - (height / 2);
                         double x2 = xCenter + (width / 2);
                         double y2 = yCenter + (height / 2);
-                        bbox.set(currentIndex, new BBox(x1, y1, x2, y2));
+                        this.model.filledBBox().set(currentIndex,
+                                new BBox(x1, y1, x2, y2));
                         currentIndex++;
                     }
                     firstIndex = nextIndex;
@@ -1152,11 +1232,140 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     }
 
     /**
+     * Processes the CV by taking the given bboxes and filling in the frames
+     * between using linear interpolation
+     *
+     * @param frameNumber
+     *            the index number of the frame that was changed and caused the
+     *            update
+     */
+    private void processCV(int frameNumber) {
+        List<BBox> bbox = this.model.labelledBBox();
+        //get the previous labelled frameindex
+        int firstIndex = frameNumber - 1;
+        int lastIndex = frameNumber;
+        boolean previousFound = false;
+        while (firstIndex >= 0 && !previousFound) {
+            if (bbox.get(firstIndex).isSet()) {
+                previousFound = true;
+            } else {
+                firstIndex--;
+            }
+        }
+
+        //fill in frames from the previous filled in frame to the given frame
+        if (previousFound) {
+            int indexDifference = lastIndex - firstIndex;
+            BBox first = this.model.labelledBBox().get(firstIndex);
+            BBox last = this.model.labelledBBox().get(lastIndex);
+            //get the differences in height, width, x, and y between the frames
+            //the data for the first and last frame
+            double firstWidth = Math.abs(first.x1() - first.x2());
+            double firstHeight = Math.abs(first.y1() - first.y2());
+            double firstXCenter = (first.x1() + first.x2()) / 2;
+            double firstYCenter = (first.y1() + first.y2()) / 2;
+            double lastWidth = Math.abs(last.x1() - last.x2());
+            double lastHeight = Math.abs(last.y1() - last.y2());
+            double lastXCenter = (last.x1() + last.x2()) / 2;
+            double lastYCenter = (last.y1() + last.y2()) / 2;
+            //the differences between the first and last frame
+            double heightDifference = lastHeight - firstHeight;
+            double widthDifference = lastWidth - firstWidth;
+            double xDifference = lastXCenter - firstXCenter;
+            double yDifference = lastYCenter - firstYCenter;
+            //the differences per frame between the first and last frame
+            double heightDifferenceScaled = heightDifference / indexDifference;
+            double widthDifferenceScaled = widthDifference / indexDifference;
+            double xDifferenceScaled = xDifference / indexDifference;
+            double yDifferenceScaled = yDifference / indexDifference;
+            int currentIndex = firstIndex + 1;
+            while (currentIndex < lastIndex) {
+                //set the scaled differences for the frames inbetween
+                //the values to set the next the next bbox to
+                double xCenter = firstXCenter
+                        + xDifferenceScaled * (currentIndex - firstIndex);
+                double yCenter = firstYCenter
+                        + yDifferenceScaled * (currentIndex - firstIndex);
+                double width = firstWidth
+                        + widthDifferenceScaled * (currentIndex - firstIndex);
+                double height = firstHeight
+                        + heightDifferenceScaled * (currentIndex - firstIndex);
+                double x1 = xCenter - (width / 2);
+                double y1 = yCenter - (height / 2);
+                double x2 = xCenter + (width / 2);
+                double y2 = yCenter + (height / 2);
+                this.model.filledBBox().set(currentIndex,
+                        new BBox(x1, y1, x2, y2));
+                currentIndex++;
+            }
+        }
+
+        //get the next labelled frameindex
+        firstIndex = frameNumber;
+        lastIndex = frameNumber + 1;
+        boolean nextFound = false;
+        while (lastIndex < this.model.labelledBBox().size() && !nextFound) {
+            if (bbox.get(lastIndex).isSet()) {
+                nextFound = true;
+            } else {
+                lastIndex++;
+            }
+        }
+
+        if (nextFound) {
+            //fill in frames from the given frame to the next filled in frame
+            int indexDifference = lastIndex - firstIndex;
+            BBox first = this.model.labelledBBox().get(firstIndex);
+            BBox last = this.model.labelledBBox().get(lastIndex);
+            //get the differences in height, width, x, and y between the frames
+            //the data for the first and last frame
+            double firstWidth = Math.abs(first.x1() - first.x2());
+            double firstHeight = Math.abs(first.y1() - first.y2());
+            double firstXCenter = (first.x1() + first.x2()) / 2;
+            double firstYCenter = (first.y1() + first.y2()) / 2;
+            double lastWidth = Math.abs(last.x1() - last.x2());
+            double lastHeight = Math.abs(last.y1() - last.y2());
+            double lastXCenter = (last.x1() + last.x2()) / 2;
+            double lastYCenter = (last.y1() + last.y2()) / 2;
+            //the differences between the first and last frame
+            double heightDifference = lastHeight - firstHeight;
+            double widthDifference = lastWidth - firstWidth;
+            double xDifference = lastXCenter - firstXCenter;
+            double yDifference = lastYCenter - firstYCenter;
+            //the differences per frame between the first and last frame
+            double heightDifferenceScaled = heightDifference / indexDifference;
+            double widthDifferenceScaled = widthDifference / indexDifference;
+            double xDifferenceScaled = xDifference / indexDifference;
+            double yDifferenceScaled = yDifference / indexDifference;
+            int currentIndex = firstIndex + 1;
+            while (currentIndex < lastIndex) {
+                //set the scaled differences for the frames inbetween
+                //the values to set the next the next bbox to
+                double xCenter = firstXCenter
+                        + xDifferenceScaled * (currentIndex - firstIndex);
+                double yCenter = firstYCenter
+                        + yDifferenceScaled * (currentIndex - firstIndex);
+                double width = firstWidth
+                        + widthDifferenceScaled * (currentIndex - firstIndex);
+                double height = firstHeight
+                        + heightDifferenceScaled * (currentIndex - firstIndex);
+                double x1 = xCenter - (width / 2);
+                double y1 = yCenter - (height / 2);
+                double x2 = xCenter + (width / 2);
+                double y2 = yCenter + (height / 2);
+                this.model.filledBBox().set(currentIndex,
+                        new BBox(x1, y1, x2, y2));
+                currentIndex++;
+            }
+        }
+    }
+
+    /**
      * Uses the bboxes find the center x and y and the width and height for a
      * given frame.
      */
     private void findYOLOValues(int frame) {
-        List<BBox> bbox = this.model.bbox();
+        List<BBox> bbox = this.model.labelledBBox();
         List<YOLO> yolo = this.model.yolo();
         BBox p = bbox.get(frame);
         //calculate the values for YOLO from the bbox
@@ -1262,9 +1471,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         return resizedImg;
     }
 
-    private void redrawLines(BufferedImage image, BBox bbox) {
+    private void redrawLines(BufferedImage image, BBox bbox, Color color) {
         Graphics2D g = image.createGraphics();
-        g.setColor(Color.BLACK);
+        g.setColor(color);
         //draw lines for bounding boxes
         int x = (int) (bbox.x1() * image.getWidth());
         g.drawLine(x, 0, x, image.getHeight());

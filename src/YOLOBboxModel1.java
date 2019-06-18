@@ -28,7 +28,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     private String videoLocation;
     private int itemIndex, currentFrame, frameRate, frameJump, totalFrames,
             videoWidth, videoHeight;
-    private List<BBox> bbox;
+    private List<BBox> labelledBBoxes, filledBBoxes;
     private List<YOLO> yolo;
     private File file;
     private FFmpegFrameGrabber frameGrabber;
@@ -55,7 +55,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.currentFrame = 0;//the index of the frame that is being shown
         this.frameRate = 0;//the frame rate of the given video
         this.frameJump = 2;//the number of frames to jump forward or backward
-        this.bbox = new LinkedList<BBox>();//holds the bbox values for each frame
+        this.labelledBBoxes = new LinkedList<BBox>();//holds the bbox values for each frame
+        this.filledBBoxes = new LinkedList<BBox>();
         this.totalFrames = 0;//the total number of frames in the video
         this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
         this.file = file;//the video file
@@ -105,7 +106,8 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
         this.currentFrame = 0;//the index of the frame that is being shown
         this.frameRate = 0;//the frame rate of the given video
         this.frameJump = 2;//the number of frames to jump forward or backward
-        this.bbox = new LinkedList<BBox>();//holds the bbox values for each frame
+        this.labelledBBoxes = new LinkedList<BBox>();//holds the bbox values for each frame
+        this.filledBBoxes = new LinkedList<BBox>();
         this.totalFrames = 0;//the total number of frames in the video
         this.yolo = new LinkedList<YOLO>();//holds the volo values for each frame
         this.file = file;//the video file
@@ -160,7 +162,7 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
             matcher.find();
             double fourthValue = Double.parseDouble(matcher.group());
             matcher.find();
-            this.bbox.set(index,
+            this.labelledBBoxes.set(index,
                     new BBox(firstValue, secondValue, thirdValue, fourthValue));
         }
         reader.close();
@@ -220,8 +222,9 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     @Override
     public void setTotalFrames(int x) {
         this.totalFrames = x;
-        while (this.bbox.size() < x) {
-            this.bbox.add(new BBox());
+        while (this.labelledBBoxes.size() < x && this.filledBBoxes.size() < x) {
+            this.labelledBBoxes.add(new BBox());
+            this.filledBBoxes.add(new BBox());
         }
         if (this.shouldLoadData) {
             try {
@@ -240,8 +243,13 @@ public final class YOLOBboxModel1 implements YOLOBboxModel {
     }
 
     @Override
-    public List<BBox> bbox() {
-        return this.bbox;
+    public List<BBox> labelledBBox() {
+        return this.labelledBBoxes;
+    }
+
+    @Override
+    public List<BBox> filledBBox() {
+        return this.filledBBoxes;
     }
 
     @Override

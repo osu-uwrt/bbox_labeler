@@ -39,7 +39,9 @@ public interface YOLOBboxModel {
 
     void setTotalFrames(int x);
 
-    List<BBox> bbox();
+    List<BBox> labelledBBox();
+
+    List<BBox> filledBBox();
 
     List<YOLO> yolo();
 

@@ -192,6 +192,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             dataClassFolder = BoxHelper.getSubFolder(dataClassFolder,
                     this.model.pathToClass());
             this.uploadFiles(fileList, dataClassFolder);
+
             this.appendPFile(lastIndex + (fileList.size() / 2));
             this.appendVideoPFile(lastIndex + 1,
                     lastIndex + (fileList.size() / 2));

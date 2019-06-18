@@ -93,7 +93,7 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         this.loadButtonPanel = new JPanel(
                 new GridLayout(ROWS_IN_LOAD_CHOICE_PANEL_GRID,
                         COLUMNS_IN_LOAD_CHOICE_PANEL_GRID));
-        this.loadComboBox.setEnabled(false);
+        this.loadComboBox.setEnabled(true);
         this.fillInLoadComboBox();
 
         /*
@@ -153,7 +153,13 @@ public final class SessionTypeView1 extends JFrame implements SessionTypeView {
         File[] videoFiles = videoFolder.listFiles();
         //add the name of each video
         for (int i = 0; i < videoFiles.length; i++) {
-            this.loadComboBox.addItem(videoFiles[i].getName());
+            String fileName = videoFiles[i].getName();
+            File[] saveFiles = (new File(FileHelper.userSaveUrl())).listFiles();
+            for (int j = 0; j < saveFiles.length; j++) {
+                if (saveFiles[j].getName().equals(fileName + ".txt")) {
+                    this.loadComboBox.addItem(videoFiles[i].getName());
+                }
+            }
         }
     }
 

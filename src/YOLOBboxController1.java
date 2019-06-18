@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
+import org.bytedeco.javacpp.avutil;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber.Exception;
@@ -120,6 +122,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect initial value of model
          */
         this.updateViewToMatchModel(this.model, this.view);
+        avutil.av_log_set_level(avutil.AV_LOG_QUIET);
     }
 
     private void loadVideo() {
@@ -148,7 +151,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             frameGrabber.stop();
 
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
-
+            this.processCV();
         } catch (IOException e) {
             System.out.println("Trouble Loading Video");
         }
@@ -180,76 +183,116 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                     Config.path_to_yolo);
             this.downloadFiles(yoloFolder);
             int lastIndex = this.getLastIndex();
-            List<File> fileList = this.createExportFiles(lastIndex);
-            BoxFolder dataClassFolder = BoxHelper.getSubFolder(yoloFolder,
-                    Config.path_to_data);
-            if (!BoxHelper.fileExists(dataClassFolder,
-                    this.model.className())) {
-                BoxHelper.createFolder(dataClassFolder, this.model.className());
-            }
-            dataClassFolder = BoxHelper.getSubFolder(dataClassFolder,
-                    this.model.pathToClass());
-            this.uploadFiles(fileList, dataClassFolder);
-            this.appendPFile(lastIndex + (fileList.size() / 2));
-            this.appendVideoPFile(lastIndex + 1,
-                    lastIndex + (fileList.size() / 2));
-            DateFormat dateFormatForYear = new SimpleDateFormat("yyyy");
-            String currentYear = dateFormatForYear.format(new Date());
-            String trainingFileName = "train_RS" + currentYear + ".txt";
-            String validationFileName = "valid_RS" + currentYear + ".txt";
-            File trainingFile = new File(
-                    FileHelper.userProgramUrl() + trainingFileName);
-            File validationFile = new File(
-                    FileHelper.userProgramUrl() + validationFileName);
-            File outputValidationFile = new File(
-                    FileHelper.userOutputUrl() + validationFileName);
-            File outputTrainingFile = new File(
-                    FileHelper.userOutputUrl() + trainingFileName);
-            File dataPFile = new File(FileHelper.userProgramUrl()
-                    + Config.training_data_pfile_name);
-            File videoPFile = new File(
-                    FileHelper.userProgramUrl() + Config.raw_video_pfile_name);
-            File outputDataPFile = new File(FileHelper.userOutputUrl()
-                    + Config.training_data_pfile_name);
-            File outputVideoPFile = new File(
-                    FileHelper.userOutputUrl() + Config.raw_video_pfile_name);
-            File indexFile = new File(
-                    FileHelper.userProgramUrl() + Config.index_file_name);
-            File outputIndexFile = new File(
-                    FileHelper.userOutputUrl() + Config.index_file_name);
-            File saveFile = new File(
-                    FileHelper.userSaveUrl() + this.model.videoName() + ".txt");
-            this.updateTrainingFiles(trainingFile, validationFile, fileList);
-            this.copyFile(dataPFile, outputDataPFile);
-            this.copyFile(videoPFile, outputVideoPFile);
-            this.copyFile(trainingFile, outputTrainingFile);
-            this.copyFile(validationFile, outputValidationFile);
-            this.copyFile(indexFile, outputIndexFile);
-            BoxFolder dataFolder = BoxHelper.getSubFolder(yoloFolder,
-                    Config.path_to_data);
-            BoxFolder videoClassFolder = BoxHelper.getSubFolder(yoloFolder,
-                    Config.path_to_videos);
-            videoClassFolder = BoxHelper.getSubFolder(videoClassFolder,
-                    this.model.pathToClass());
-            BoxHelper.reuploadFile(trainingFileName, dataFolder);
-            BoxHelper.reuploadFile(validationFileName, dataFolder);
-            BoxHelper.reuploadFile(Config.training_data_pfile_name,
-                    dataClassFolder);
+            int classIndex = this.getIndex();
+            if (classIndex >= 0) {
 
-            BoxHelper.reuploadFile(Config.raw_video_pfile_name,
-                    videoClassFolder);
-            BoxHelper.reuploadFile(Config.index_file_name, yoloFolder);
-            File videoFile = this.model.file();
-            Collections.addAll(fileList, trainingFile, outputTrainingFile,
-                    validationFile, outputValidationFile, dataPFile,
-                    outputDataPFile, videoPFile, outputVideoPFile, videoFile,
-                    indexFile, outputIndexFile, saveFile);
-            this.deleteFiles(fileList);
-            this.view.dispose();
+                List<File> createdFilesList = new LinkedList<File>();
+                List<File> needUploadedFileList = new LinkedList<File>();
+                CreateFilesRunner createFilesRunner = new CreateFilesRunner(
+                        this.model, createdFilesList, needUploadedFileList,
+                        lastIndex, classIndex);
+                Thread createFilesThread = new Thread(createFilesRunner);
+                createFilesThread.start();
+                BoxFolder dataClassFolder = BoxHelper.getSubFolder(yoloFolder,
+                        Config.path_to_data);
+                if (!BoxHelper.fileExists(dataClassFolder,
+                        this.model.className())) {
+                    BoxHelper.createFolder(dataClassFolder,
+                            this.model.className());
+                }
+                dataClassFolder = BoxHelper.getSubFolder(dataClassFolder,
+                        this.model.pathToClass());
+                UploadFilesRunner uploadFilesRunner = new UploadFilesRunner(
+                        needUploadedFileList, dataClassFolder,
+                        createFilesThread);
+                List<Thread> uploadFilesThreadsList = new LinkedList<Thread>();
+                for (int i = 0; i < 10; i++) {
+                    Thread nextThread = new Thread(uploadFilesRunner);
+                    uploadFilesThreadsList.add(nextThread);
+                    nextThread.start();
+                }
+
+                while (createFilesThread.isAlive()
+                        || this.hasLiveThread(uploadFilesThreadsList)) {
+                    try {
+                        System.out.println(
+                                "Still uploading files. Waiting for 3 seconds.");
+                        TimeUnit.SECONDS.sleep(3);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                this.appendPFile(lastIndex + (createdFilesList.size() / 2));
+                this.appendVideoPFile(lastIndex + 1,
+                        lastIndex + (createdFilesList.size() / 2));
+                DateFormat dateFormatForYear = new SimpleDateFormat("yyyy");
+                String currentYear = dateFormatForYear.format(new Date());
+                String trainingFileName = "train_RS" + currentYear + ".txt";
+                String validationFileName = "valid_RS" + currentYear + ".txt";
+                File trainingFile = new File(
+                        FileHelper.userProgramUrl() + trainingFileName);
+                File validationFile = new File(
+                        FileHelper.userProgramUrl() + validationFileName);
+                File outputValidationFile = new File(
+                        FileHelper.userOutputUrl() + validationFileName);
+                File outputTrainingFile = new File(
+                        FileHelper.userOutputUrl() + trainingFileName);
+                File dataPFile = new File(FileHelper.userProgramUrl()
+                        + Config.training_data_pfile_name);
+                File videoPFile = new File(FileHelper.userProgramUrl()
+                        + Config.raw_video_pfile_name);
+                File outputDataPFile = new File(FileHelper.userOutputUrl()
+                        + Config.training_data_pfile_name);
+                File outputVideoPFile = new File(FileHelper.userOutputUrl()
+                        + Config.raw_video_pfile_name);
+                File indexFile = new File(
+                        FileHelper.userProgramUrl() + Config.index_file_name);
+                File outputIndexFile = new File(
+                        FileHelper.userOutputUrl() + Config.index_file_name);
+                File saveFile = new File(FileHelper.userSaveUrl()
+                        + this.model.videoName() + ".txt");
+                this.updateTrainingFiles(trainingFile, validationFile,
+                        createdFilesList);
+                this.copyFile(dataPFile, outputDataPFile);
+                this.copyFile(videoPFile, outputVideoPFile);
+                this.copyFile(trainingFile, outputTrainingFile);
+                this.copyFile(validationFile, outputValidationFile);
+                this.copyFile(indexFile, outputIndexFile);
+                BoxFolder dataFolder = BoxHelper.getSubFolder(yoloFolder,
+                        Config.path_to_data);
+                BoxFolder videoClassFolder = BoxHelper.getSubFolder(yoloFolder,
+                        Config.path_to_videos);
+                videoClassFolder = BoxHelper.getSubFolder(videoClassFolder,
+                        this.model.pathToClass());
+                BoxHelper.reuploadFile(trainingFileName, dataFolder);
+                BoxHelper.reuploadFile(validationFileName, dataFolder);
+                BoxHelper.reuploadFile(Config.training_data_pfile_name,
+                        dataClassFolder);
+                BoxHelper.reuploadFile(Config.raw_video_pfile_name,
+                        videoClassFolder);
+                BoxHelper.reuploadFile(Config.index_file_name, yoloFolder);
+                File videoFile = this.model.file();
+                Collections.addAll(createdFilesList, trainingFile,
+                        outputTrainingFile, validationFile,
+                        outputValidationFile, dataPFile, outputDataPFile,
+                        videoPFile, outputVideoPFile, videoFile, indexFile,
+                        outputIndexFile, saveFile);
+                this.deleteFiles(createdFilesList);
+                this.view.dispose();
+            }
         } catch (IOException e1) {
             System.out.println("Problem exporting");
             e1.printStackTrace();
         }
+    }
+
+    private boolean hasLiveThread(List<Thread> threads) {
+        for (Thread thread : threads) {
+            if (thread.isAlive()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -646,7 +689,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                 if (matcher.find()) {
                     index = Integer.parseInt(matcher.group());
                 }
-                if (index > 0) {
+                if (index >= 0) {
                     File indexFile = new File(FileHelper.userProgramUrl()
                             + Config.index_file_name);
                     try {
@@ -731,6 +774,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     private void copyFile(File source, File destination) throws IOException {
         Path sourcePath = source.toPath();
         Path destinationPath = destination.toPath();
+        destination.getParentFile().mkdirs();
         Files.copy(sourcePath, destinationPath,
                 StandardCopyOption.REPLACE_EXISTING);
     }
@@ -809,9 +853,17 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          */
     }
 
+    //for each bbox in the labelled list, if its not set replace it with the
+    //one that was filled in
     @Override
     public void processFillInFramesEvent() {
-        this.processCV();
+        List<BBox> labelledBBox = this.model.labelledBBox();
+        List<BBox> filledBBox = this.model.filledBBox();
+        for (int i = 0; i < labelledBBox.size(); i++) {
+            if (!labelledBBox.get(i).isSet()) {
+                labelledBBox.set(i, filledBBox.get(i));
+            }
+        }
     }
 
     /**
@@ -845,8 +897,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             this.model.setScaled(scaled);
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
             BufferedImage lines = deepCopy(scaled);
-            this.redrawLines(lines,
-                    this.model.bbox().get(this.model.currentFrame()));
+            if (this.model.labelledBBox().get(this.model.currentFrame())
+                    .isSet()) {
+                this.redrawLines(lines, this.model.labelledBBox()
+                        .get(this.model.currentFrame()), Color.BLACK);
+            } else {
+                this.redrawLines(lines,
+                        this.model.filledBBox().get(this.model.currentFrame()),
+                        Color.GREEN);
+            }
             this.model.setLines(lines);
             frameGrabber.stop();
         } catch (Exception e) {
@@ -891,8 +950,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             this.model.setScaled(scaled);
             this.model.setCurrentFrame(frameGrabber.getFrameNumber());
             BufferedImage lines = deepCopy(scaled);
-            this.redrawLines(lines,
-                    this.model.bbox().get(this.model.currentFrame()));
+            if (this.model.labelledBBox().get(this.model.currentFrame())
+                    .isSet()) {
+                this.redrawLines(lines, this.model.labelledBBox()
+                        .get(this.model.currentFrame()), Color.BLACK);
+            } else {
+                this.redrawLines(lines,
+                        this.model.filledBBox().get(this.model.currentFrame()),
+                        Color.GREEN);
+            }
             this.model.setLines(lines);
             frameGrabber.stop();
         } catch (Exception e) {
@@ -912,7 +978,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         File saveFile = new File(FileHelper.userSaveUrl()
                 + this.model.file().getName() + ".txt");
         saveFile.getParentFile().mkdirs();
-        List<BBox> bbox = this.model.bbox();
+        List<BBox> bbox = this.model.labelledBBox();
         try {
             BufferedWriter writer = new BufferedWriter(
                     new FileWriter(saveFile));
@@ -935,8 +1001,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         BufferedImage scaled = (BufferedImage) this.getScaledImage(bi);
         this.model.setScaled(scaled);
         BufferedImage lines = deepCopy(scaled);
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
         this.view.updateButtonAreaSize();
         /*
@@ -947,24 +1020,32 @@ public final class YOLOBboxController1 implements YOLOBboxController {
 
     @Override
     public void processMouseClickedEvent(int x, int y) {
-        List<BBox> bbox = this.model.bbox();
-        BBox temp = bbox.get(this.model.currentFrame());
+        List<BBox> bbox = this.model.labelledBBox();
+        BBox tempBBox = bbox.get(this.model.currentFrame());
         //get the proportion of the click relative to the frame
         double dx = ((double) x) / this.model.scaled().getWidth();
         double dy = ((double) y) / this.model.scaled().getHeight();
         //set the pair of values based on the last pair that was set
-        if (temp.firstIsSetNext()) {
-            temp.setx1(dx);
-            temp.sety1(dy);
+        if (tempBBox.firstIsSetNext()) {
+            tempBBox.setx1(dx);
+            tempBBox.sety1(dy);
         } else {
-            temp.setx2(dx);
-            temp.sety2(dy);
+            tempBBox.setx2(dx);
+            tempBBox.sety2(dy);
         }
         //set the data where it needs to be
-        bbox.set(this.model.currentFrame(), temp);
+        bbox.set(this.model.currentFrame(), tempBBox);
+        this.processCV(this.model.currentFrame());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -978,8 +1059,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -993,8 +1081,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1008,8 +1103,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1023,8 +1125,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1038,8 +1147,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1053,8 +1169,15 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         this.model.setLastKnownX((double) x / this.model.scaled().getWidth());
         this.model.setLastKnownY((double) y / this.model.scaled().getHeight());
         BufferedImage lines = deepCopy(this.model.scaled());
-        this.redrawLines(lines,
-                this.model.bbox().get(this.model.currentFrame()));
+        if (this.model.labelledBBox().get(this.model.currentFrame()).isSet()) {
+            this.redrawLines(lines,
+                    this.model.labelledBBox().get(this.model.currentFrame()),
+                    Color.BLACK);
+        } else {
+            this.redrawLines(lines,
+                    this.model.filledBBox().get(this.model.currentFrame()),
+                    Color.GREEN);
+        }
         this.model.setLines(lines);
 
         /*
@@ -1069,7 +1192,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
      */
     private void processCV() {
         int i = 0;
-        List<BBox> bbox = this.model.bbox();
+        List<BBox> bbox = this.model.labelledBBox();
 
         //get the first frame with a bounding box
         while (i < bbox.size() && !(bbox.get(i).isSet())) {
@@ -1137,7 +1260,8 @@ public final class YOLOBboxController1 implements YOLOBboxController {
                         double y1 = yCenter - (height / 2);
                         double x2 = xCenter + (width / 2);
                         double y2 = yCenter + (height / 2);
-                        bbox.set(currentIndex, new BBox(x1, y1, x2, y2));
+                        this.model.filledBBox().set(currentIndex,
+                                new BBox(x1, y1, x2, y2));
                         currentIndex++;
                     }
                     firstIndex = nextIndex;
@@ -1152,11 +1276,140 @@ public final class YOLOBboxController1 implements YOLOBboxController {
     }
 
     /**
+     * Processes the CV by taking the given bboxes and filling in the frames
+     * between using linear interpolation
+     *
+     * @param frameNumber
+     *            the index number of the frame that was changed and caused the
+     *            update
+     */
+    private void processCV(int frameNumber) {
+        List<BBox> bbox = this.model.labelledBBox();
+        //get the previous labelled frameindex
+        int firstIndex = frameNumber - 1;
+        int lastIndex = frameNumber;
+        boolean previousFound = false;
+        while (firstIndex >= 0 && !previousFound) {
+            if (bbox.get(firstIndex).isSet()) {
+                previousFound = true;
+            } else {
+                firstIndex--;
+            }
+        }
+
+        //fill in frames from the previous filled in frame to the given frame
+        if (previousFound) {
+            int indexDifference = lastIndex - firstIndex;
+            BBox first = this.model.labelledBBox().get(firstIndex);
+            BBox last = this.model.labelledBBox().get(lastIndex);
+            //get the differences in height, width, x, and y between the frames
+            //the data for the first and last frame
+            double firstWidth = Math.abs(first.x1() - first.x2());
+            double firstHeight = Math.abs(first.y1() - first.y2());
+            double firstXCenter = (first.x1() + first.x2()) / 2;
+            double firstYCenter = (first.y1() + first.y2()) / 2;
+            double lastWidth = Math.abs(last.x1() - last.x2());
+            double lastHeight = Math.abs(last.y1() - last.y2());
+            double lastXCenter = (last.x1() + last.x2()) / 2;
+            double lastYCenter = (last.y1() + last.y2()) / 2;
+            //the differences between the first and last frame
+            double heightDifference = lastHeight - firstHeight;
+            double widthDifference = lastWidth - firstWidth;
+            double xDifference = lastXCenter - firstXCenter;
+            double yDifference = lastYCenter - firstYCenter;
+            //the differences per frame between the first and last frame
+            double heightDifferenceScaled = heightDifference / indexDifference;
+            double widthDifferenceScaled = widthDifference / indexDifference;
+            double xDifferenceScaled = xDifference / indexDifference;
+            double yDifferenceScaled = yDifference / indexDifference;
+            int currentIndex = firstIndex + 1;
+            while (currentIndex < lastIndex) {
+                //set the scaled differences for the frames inbetween
+                //the values to set the next the next bbox to
+                double xCenter = firstXCenter
+                        + xDifferenceScaled * (currentIndex - firstIndex);
+                double yCenter = firstYCenter
+                        + yDifferenceScaled * (currentIndex - firstIndex);
+                double width = firstWidth
+                        + widthDifferenceScaled * (currentIndex - firstIndex);
+                double height = firstHeight
+                        + heightDifferenceScaled * (currentIndex - firstIndex);
+                double x1 = xCenter - (width / 2);
+                double y1 = yCenter - (height / 2);
+                double x2 = xCenter + (width / 2);
+                double y2 = yCenter + (height / 2);
+                this.model.filledBBox().set(currentIndex,
+                        new BBox(x1, y1, x2, y2));
+                currentIndex++;
+            }
+        }
+
+        //get the next labelled frameindex
+        firstIndex = frameNumber;
+        lastIndex = frameNumber + 1;
+        boolean nextFound = false;
+        while (lastIndex < this.model.labelledBBox().size() && !nextFound) {
+            if (bbox.get(lastIndex).isSet()) {
+                nextFound = true;
+            } else {
+                lastIndex++;
+            }
+        }
+
+        if (nextFound) {
+            //fill in frames from the given frame to the next filled in frame
+            int indexDifference = lastIndex - firstIndex;
+            BBox first = this.model.labelledBBox().get(firstIndex);
+            BBox last = this.model.labelledBBox().get(lastIndex);
+            //get the differences in height, width, x, and y between the frames
+            //the data for the first and last frame
+            double firstWidth = Math.abs(first.x1() - first.x2());
+            double firstHeight = Math.abs(first.y1() - first.y2());
+            double firstXCenter = (first.x1() + first.x2()) / 2;
+            double firstYCenter = (first.y1() + first.y2()) / 2;
+            double lastWidth = Math.abs(last.x1() - last.x2());
+            double lastHeight = Math.abs(last.y1() - last.y2());
+            double lastXCenter = (last.x1() + last.x2()) / 2;
+            double lastYCenter = (last.y1() + last.y2()) / 2;
+            //the differences between the first and last frame
+            double heightDifference = lastHeight - firstHeight;
+            double widthDifference = lastWidth - firstWidth;
+            double xDifference = lastXCenter - firstXCenter;
+            double yDifference = lastYCenter - firstYCenter;
+            //the differences per frame between the first and last frame
+            double heightDifferenceScaled = heightDifference / indexDifference;
+            double widthDifferenceScaled = widthDifference / indexDifference;
+            double xDifferenceScaled = xDifference / indexDifference;
+            double yDifferenceScaled = yDifference / indexDifference;
+            int currentIndex = firstIndex + 1;
+            while (currentIndex < lastIndex) {
+                //set the scaled differences for the frames inbetween
+                //the values to set the next the next bbox to
+                double xCenter = firstXCenter
+                        + xDifferenceScaled * (currentIndex - firstIndex);
+                double yCenter = firstYCenter
+                        + yDifferenceScaled * (currentIndex - firstIndex);
+                double width = firstWidth
+                        + widthDifferenceScaled * (currentIndex - firstIndex);
+                double height = firstHeight
+                        + heightDifferenceScaled * (currentIndex - firstIndex);
+                double x1 = xCenter - (width / 2);
+                double y1 = yCenter - (height / 2);
+                double x2 = xCenter + (width / 2);
+                double y2 = yCenter + (height / 2);
+                this.model.filledBBox().set(currentIndex,
+                        new BBox(x1, y1, x2, y2));
+                currentIndex++;
+            }
+        }
+    }
+
+    /**
      * Uses the bboxes find the center x and y and the width and height for a
      * given frame.
      */
     private void findYOLOValues(int frame) {
-        List<BBox> bbox = this.model.bbox();
+        List<BBox> bbox = this.model.labelledBBox();
         List<YOLO> yolo = this.model.yolo();
         BBox p = bbox.get(frame);
         //calculate the values for YOLO from the bbox
@@ -1262,9 +1515,9 @@ public final class YOLOBboxController1 implements YOLOBboxController {
         return resizedImg;
     }
 
-    private void redrawLines(BufferedImage image, BBox bbox) {
+    private void redrawLines(BufferedImage image, BBox bbox, Color color) {
         Graphics2D g = image.createGraphics();
-        g.setColor(Color.BLACK);
+        g.setColor(color);
         //draw lines for bounding boxes
         int x = (int) (bbox.x1() * image.getWidth());
         g.drawLine(x, 0, x, image.getHeight());
@@ -1365,6 +1618,341 @@ public final class YOLOBboxController1 implements YOLOBboxController {
             this.model.setFrameJump(1);
         }
         this.updateViewToMatchModel(this.model, this.view);
+    }
+
+}
+
+class UploadFilesRunner implements Runnable {
+    private List<File> createdFilesList;
+    BoxFolder folder;
+    Thread createFilesThread;
+
+    public UploadFilesRunner(List<File> createdFilesList, BoxFolder folder,
+            Thread createFilesThread) {
+        this.createdFilesList = createdFilesList;
+        this.folder = folder;
+        this.createFilesThread = createFilesThread;
+    }
+
+    @Override
+    public void run() {
+        while (this.createFilesThread.isAlive()
+                || this.createdFilesList.size() > 0) {
+            if (this.createdFilesList.size() > 0) {
+                File file = this.createdFilesList.remove(0);
+                BoxHelper.uploadFile(file.getName(), this.folder);
+            } else {
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    System.out.println("UploadFilesRunner interupted");
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+
+class CreateFilesRunner implements Runnable {
+    private YOLOBboxModel model;
+    private List<File> createdFilesList;
+    private List<File> needUploadedFilesList;
+    int lastIndex;
+    int classIndex;
+
+    public CreateFilesRunner(YOLOBboxModel model, List<File> createdFilesList,
+            List<File> needUploadedFilesList, int lastIndex, int classIndex) {
+        this.createdFilesList = createdFilesList;
+        this.model = model;
+        this.lastIndex = lastIndex;
+        this.needUploadedFilesList = needUploadedFilesList;
+        this.classIndex = classIndex;
+    }
+
+    @Override
+    public void run() {
+        List<File> newFiles = this.createExportFiles(this.lastIndex,
+                this.classIndex);
+        this.createdFilesList.addAll(newFiles);
+        this.needUploadedFilesList.addAll(newFiles);
+    }
+
+    /**
+     * Gets the index for the class from the index file. If it can't find one,
+     * it asks the user and adds it to the file.
+     *
+     * @return
+     */
+    private int getIndex() {
+        int index = -1;
+        File indexFile = new File(
+                FileHelper.userProgramUrl() + Config.index_file_name);
+        try {
+            BufferedReader indexFileReader = new BufferedReader(
+                    new FileReader(indexFile));
+            String line;
+            Boolean classFound = false;
+            while (!classFound && (line = indexFileReader.readLine()) != null) {
+                if (line.startsWith(this.model.className())) {
+                    line = line.substring(this.model.className().length());
+                    String regex = "([0-9]+)";
+                    Pattern pattern = Pattern.compile(regex);
+                    Matcher matcher = pattern.matcher(line);
+                    if (matcher.find()) {
+                        index = Integer.parseInt(matcher.group());
+                        classFound = true;
+                    }
+                }
+            }
+            indexFileReader.close();
+            if (index == -1) {
+                index = this.askForIndex();
+            }
+        } catch (IOException e) {
+            index = this.askForIndex();
+        }
+        return index;
+    }
+
+    /**
+     * Creates a pop-up window asking the user for an integer to use as the
+     * index for the class. Keeps asking until a valid integer is given or
+     * nothing is given. If a valid integer is given, it writes a line on the
+     * index file for the class and then returns the index. If nothing is given
+     * it returns -1.
+     *
+     * @return the integer given or -1 if nothing is given
+     */
+    private int askForIndex() {
+        int index = -1;
+        String input = "";
+        while (input == "") {
+            input = JOptionPane.showInputDialog("Could not find an index for "
+                    + this.model.className()
+                    + ". Please enter an integer for this class or leave it"
+                    + " empty to stop exporting.");
+            if (input != null && input.length() > 0) {
+                String regex = "([0-9]+)";
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(input);
+                if (matcher.find()) {
+                    index = Integer.parseInt(matcher.group());
+                }
+                if (index >= 0) {
+                    File indexFile = new File(FileHelper.userProgramUrl()
+                            + Config.index_file_name);
+                    try {
+                        FileWriter writer = new FileWriter(indexFile);
+                        writer.append(this.model.className() + ": " + index
+                                + System.lineSeparator());
+                        writer.close();
+                    } catch (IOException e) {
+                        System.err.println("Index file could not be written.");
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println(
+                            "Input: " + input + " is not valid. Asking again.");
+                    input = "";
+                }
+            }
+        }
+        return index;
+    }
+
+    /**
+     * Uses the bboxes find the center x and y and the width and height for a
+     * given frame.
+     */
+    private void findYOLOValues(int frame) {
+        List<BBox> bbox = this.model.labelledBBox();
+        List<YOLO> yolo = this.model.yolo();
+        BBox p = bbox.get(frame);
+        //calculate the values for YOLO from the bbox
+        double width = (Math.abs(p.x1() - p.x2()));
+        double height = (Math.abs(p.y1() - p.y2()));
+        double x = (p.x1() + p.x2()) / 2;
+        double y = (p.y1() + p.y2()) / 2;
+        //add the values to the yolo map
+        YOLO ny = new YOLO(x, y, width, height);
+        yolo.add(frame, ny);
+    }
+
+    /**
+     * Creates the text and data files and puts them in the export folder.
+     *
+     * @param lastIndex
+     * @return the list of files that were created
+     */
+    private List<File> createExportFiles(int lastIndex, int classIndex) {
+        String className = this.model.className();
+        int max = this.model.totalFrames() - 1;
+        List<YOLO> yolo = this.model.yolo();
+        List<File> exportedFiles = new LinkedList<File>();
+        String outputDirectory = FileHelper.userOutputUrl();
+        int index;
+        if ((index = classIndex) >= 0) {
+            FFmpegFrameGrabber frameGrabber = this.model.frameGrabber();
+            try {
+                frameGrabber.start();
+                Java2DFrameConverter j = new Java2DFrameConverter();
+
+                //counter for iterating through yolo
+                int i = 0;
+                while (i < max) {
+                    //get the YOLO values
+                    this.findYOLOValues(i);
+                    //iterate through the yolos and create the files for the ones with data
+                    YOLO next = yolo.get(i);
+                    if (next.x() > 0.0 && next.y() > 0.0 && next.width() > 0.0
+                            && next.height() > 0.0) {
+                        frameGrabber.setFrameNumber(i);
+                        BufferedImage image = j
+                                .convert(frameGrabber.grabImage());
+                        int id = lastIndex + 1;
+                        lastIndex++;
+                        exportedFiles
+                                .addAll(this.outputFrame(id, outputDirectory,
+                                        className, image, next, index));
+                    }
+                    i++;
+                }
+                frameGrabber.close();
+                System.out.println(
+                        "Output Files created in : " + outputDirectory);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+        return exportedFiles;
+    }
+
+    /**
+     * Creates jpg and txt files in the export folder and returns a list of the
+     * files.
+     *
+     * @param id
+     *            the number that is given to the file
+     * @param fileLocation
+     *            the folder to put the data files in
+     * @param className
+     *            the name of the class the files are for
+     * @param image
+     *            the image to be ouput
+     * @param yolo
+     *            the data to be output
+     * @param index
+     *            the index for the item being labelled
+     * @return the files that were output
+     */
+    private List<File> outputFrame(int id, String fileLocation,
+            String className, BufferedImage image, YOLO yolo, int index) {
+        List<File> fileList = new LinkedList<File>();
+        fileList.addAll(this.outputImage(id, fileLocation, className, image));
+        fileList.addAll(
+                this.outputData(id, fileLocation, className, yolo, index));
+        return fileList;
+    }
+
+    /**
+     * Takes the given int and returns a string of the int with leading zeros to
+     * make the string 5 characters long.
+     *
+     * @param i
+     *            an integer less than 100,000
+     * @return the given integer as a string with leading zeros
+     */
+    private String formattedInteger(int i) {
+        String s = Integer.toString(i);
+        while (s.length() < 5) {
+            s = "0" + s;
+        }
+        return s;
+    }
+
+    /**
+     * Outputs the given image to the given file location formatted with the
+     * class name and the given id as a jpg.
+     *
+     * @param id
+     *            the id to give the file name
+     * @param fileLocation
+     *            the location to output the file to
+     * @param className
+     *            the name of the class being worked on
+     * @param image
+     *            the image to be output
+     * @return the image file that was output as a list of files
+     */
+    private List<File> outputImage(int id, String fileLocation,
+            String className, BufferedImage image) {
+        List<File> fileList = new LinkedList<File>();
+        String formattedID = this.formattedInteger(id);
+        String fileExtension = ".jpg";
+        String fileName = fileLocation + className + "_" + formattedID
+                + fileExtension;
+
+        File imageFile = new File(fileName);
+        //build the path to the file
+        imageFile.getParentFile().mkdirs();
+        //create the file
+        FileHelper.createFile(imageFile);
+
+        try {
+            ImageIO.write(image, "jpg", imageFile);
+        } catch (IOException e) {
+            System.err.println("Problem exporting to jpg");
+            e.printStackTrace();
+        }
+        fileList.add(imageFile);
+        return fileList;
+
+    }
+
+    /**
+     * Outputs the given yolo to the given file location formatted with the
+     * class name and the given id as a text file.
+     *
+     * @param id
+     *            the id to give the file name
+     * @param fileLocation
+     *            the location to output the file to
+     * @param className
+     *            the name of the class being worked on
+     * @param yolo
+     *            the yolo data to be output
+     * @param index
+     *            the index of the item being labelled
+     * @return the text file that was output as a list of files
+     */
+    private List<File> outputData(int id, String fileLocation, String className,
+            YOLO yolo, int index) {
+        List<File> fileList = new LinkedList<File>();
+        PrintWriter writer;
+
+        String formattedID = this.formattedInteger(id);
+        String fileExtension = ".txt";
+
+        File dataFile = new File(
+                fileLocation + className + "_" + formattedID + fileExtension);
+        //build the path to the file
+        dataFile.getParentFile().mkdirs();
+        //create the file
+        FileHelper.createFile(dataFile);
+
+        try {
+            writer = new PrintWriter(dataFile, "UTF-8");
+            //print [item index] [x] [y] [width] [height]
+            writer.println(index + " " + yolo.x() + " " + yolo.y() + " "
+                    + yolo.width() + " " + yolo.height());
+            writer.close();
+        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            System.err.println("Problem exporting to text file");
+        }
+        fileList.add(dataFile);
+        return fileList;
+
     }
 
 }

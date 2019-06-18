@@ -1,3 +1,7 @@
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -143,13 +147,38 @@ public final class NewSessionController1 implements NewSessionController {
                 this.thumbnailSize);
         //get the name of the file
         String name = file.getInfo().getName();
+        boolean inColor = false;
+        java.awt.Color c = this.model.getColorNeutral();
         //add the video
         try {
-            InputStream bais = new ByteArrayInputStream(thumbnail);
-            java.awt.Color c = this.model.getColorNeutral();
-            boolean inColor = !FileHelper.hasVideoBeenDone(name);
-            this.view.addVideo(ImageIO.read(bais), name, inColor, c);
+            if (thumbnail.length > 1) {
+                InputStream bais = new ByteArrayInputStream(thumbnail);
+                inColor = !FileHelper.hasVideoBeenDone(name);
+                this.view.addVideo(ImageIO.read(bais), name, inColor, c);
+            } else {
+                System.out.println("Could not get a thumbnail for " + name);
+                inColor = !FileHelper.hasVideoBeenDone(name);
+                try {
+                    BufferedImage defaultImage = this.getScaledImage(
+                            ImageIO.read(new File("data/default.png")),
+                            this.thumbnailSize, this.thumbnailSize);
+                    this.view.addVideo(defaultImage, name, inColor, c);
+                } catch (IOException e1) {
+                    System.err.println("Could not open default image");
+                }
+
+            }
         } catch (IOException e) {
+            System.err.println("Problem displaying thumbnail for: " + name);
+            System.err.println("Displaying default image instead");
+            try {
+                BufferedImage defaultImage = this.getScaledImage(
+                        ImageIO.read(new File("data/default.png")),
+                        this.thumbnailSize, this.thumbnailSize);
+                this.view.addVideo(defaultImage, name, inColor, c);
+            } catch (IOException e1) {
+                System.err.println("Could not open default image");
+            }
             e.printStackTrace();
         }
     }
@@ -342,13 +371,9 @@ public final class NewSessionController1 implements NewSessionController {
 
     @Override
     public void processPanelSelect(JPanel jpanel) {
-        //change the previously selected panel, if there is one,
-        //to the neutral border
-        String name = jpanel.getName();
+        //change all panels to neutral border
         for (JPanel panel : this.view.getVideoPanelsList()) {
-            if (panel.getName().equals(name)) {
-                this.view.colorBorder(panel, this.model.getRGBNeutral());
-            }
+            this.view.colorBorder(panel, this.model.getRGBNeutral());
         }
         //change the newly selected panel to the selected border
         this.view.colorBorder(jpanel, this.model.getRGBSelected());
@@ -377,5 +402,19 @@ public final class NewSessionController1 implements NewSessionController {
         //add each video to the view
         this.addVideosToView(videoFolder);
         this.model.setNameOfSelectedVideo("");
+    }
+
+    /*
+     * Returns an image of the appropriately scaled height for the window
+     */
+    private BufferedImage getScaledImage(Image srcImg, int width, int height) {
+        BufferedImage resizedImg = new BufferedImage(width, height,
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = resizedImg.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(srcImg, 0, 0, width, height, null);
+        g2.dispose();
+        return resizedImg;
     }
 }

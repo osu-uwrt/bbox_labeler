@@ -211,15 +211,15 @@ public class BoxHelper {
             folder.uploadFile(is, fileName);
             is.close();
         } catch (FileNotFoundException e) {
-            System.out.println("File could not be found to upload.");
+            System.out.println(fileName + " could not be found to upload.");
             e.printStackTrace();
         } catch (BoxAPIException e) {
-            System.out.println(
-                    "File can not uploaded, likely due to insufficient space.");
+            System.out.println(fileName
+                    + " can not uploaded, likely due to insufficient space.");
             e.printStackTrace();
         } catch (IOException e) {
-            System.out.println(
-                    "I/O Exception while attempting to upload file to box.");
+            System.out.println("I/O Exception while attempting to upload "
+                    + fileName + " to box.");
             e.printStackTrace();
         }
     }

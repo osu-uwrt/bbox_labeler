@@ -33,6 +33,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
+import org.bytedeco.javacpp.avutil;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber.Exception;
@@ -120,6 +121,7 @@ public final class YOLOBboxController1 implements YOLOBboxController {
          * Update view to reflect initial value of model
          */
         this.updateViewToMatchModel(this.model, this.view);
+        avutil.av_log_set_level(avutil.AV_LOG_QUIET);
     }
 
     private void loadVideo() {

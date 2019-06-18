@@ -289,6 +289,7 @@ public final class YOLOBboxView1 extends JFrame implements YOLOBboxView,
         this.framesBackButton.setEnabled(!this.framesBackButton.isEnabled());
         this.framesForwardButton
                 .setEnabled(!this.framesForwardButton.isEnabled());
+        this.saveButton.setEnabled(!this.saveButton.isEnabled());
     }
 
     @Override
